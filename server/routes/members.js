@@ -141,7 +141,8 @@ router.post('/', requireAuth, checkPermission('manage_members'), upload.single('
       joining_date,
       status,
       notes,
-      profile_photo_url
+      profile_photo_url,
+      profile_photo
     } = req.body;
 
     if (!full_name || !college_id || !email) {
@@ -154,7 +155,7 @@ router.post('/', requireAuth, checkPermission('manage_members'), upload.single('
       return res.status(400).json({ success: false, message: `Member with College ID "${college_id}" already exists.` });
     }
 
-    let profilePhoto = profile_photo_url || null;
+    let profilePhoto = profile_photo || profile_photo_url || null;
     if (req.file) {
       profilePhoto = `/uploads/avatars/${req.file.filename}`;
     }
@@ -244,7 +245,8 @@ router.put('/:id', requireAuth, checkPermission('manage_members'), upload.single
       joining_date,
       status,
       notes,
-      profile_photo_url
+      profile_photo_url,
+      profile_photo
     } = req.body;
 
     if (college_id && college_id.trim() !== existing.college_id) {
@@ -257,6 +259,8 @@ router.put('/:id', requireAuth, checkPermission('manage_members'), upload.single
     let profilePhoto = existing.profile_photo;
     if (req.file) {
       profilePhoto = `/uploads/avatars/${req.file.filename}`;
+    } else if (profile_photo !== undefined) {
+      profilePhoto = profile_photo;
     } else if (profile_photo_url !== undefined) {
       profilePhoto = profile_photo_url;
     }

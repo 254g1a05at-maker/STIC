@@ -228,7 +228,7 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
     joining_date: new Date().toISOString().split('T')[0],
     status: 'Active',
     notes: '',
-    profile_photo_url: ''
+    profile_photo: ''
   });
   const [avatarFile, setAvatarFile] = useState(null);
 
@@ -280,7 +280,7 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
       joining_date: new Date().toISOString().split('T')[0],
       status: 'Active',
       notes: '',
-      profile_photo_url: ''
+      profile_photo: ''
     });
     setAvatarFile(null);
     setIsFormOpen(true);
@@ -302,7 +302,7 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
       joining_date: new Date().toISOString().split('T')[0],
       status: 'Active',
       notes: '',
-      profile_photo_url: ''
+      profile_photo: ''
     });
     setAvatarFile(null);
     setIsFormOpen(true);
@@ -324,7 +324,7 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
       joining_date: member.joining_date || '',
       status: member.status || 'Active',
       notes: member.notes || '',
-      profile_photo_url: member.profile_photo || ''
+      profile_photo: member.profile_photo || ''
     });
     setAvatarFile(null);
     setIsFormOpen(true);
@@ -1398,9 +1398,9 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
                             alt="Preview"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
-                        ) : formData.profile_photo_url ? (
+                        ) : formData.profile_photo ? (
                           <img
-                            src={formData.profile_photo_url}
+                            src={formData.profile_photo}
                             alt="Preview"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
@@ -1421,8 +1421,8 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
                           className="form-input"
                           style={{ flex: 1, minWidth: '180px' }}
                           placeholder="Or paste direct image URL"
-                          value={formData.profile_photo_url}
-                          onChange={(e) => setFormData({ ...formData, profile_photo_url: e.target.value })}
+                          value={formData.profile_photo}
+                          onChange={(e) => setFormData({ ...formData, profile_photo: e.target.value })}
                         />
                       </div>
                     </div>

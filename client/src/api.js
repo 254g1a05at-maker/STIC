@@ -140,6 +140,30 @@ async function handleSupabaseRequest(endpoint, options = {}) {
           row = { ...options.body };
         }
 
+        // Map profile_photo_url to profile_photo column for Supabase schema
+        if ('profile_photo_url' in row) {
+          if (row.profile_photo_url) {
+            row.profile_photo = row.profile_photo_url;
+          }
+          delete row.profile_photo_url;
+        }
+
+        // Support image file upload conversion to Data URL for Supabase if provided
+        if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
+          const avatarVal = options.body.get('avatar');
+          if (avatarVal && typeof avatarVal === 'object' && avatarVal.size > 0) {
+            try {
+              const dataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(avatarVal);
+              });
+              if (dataUrl) row.profile_photo = dataUrl;
+            } catch (e) {}
+          }
+        }
+
         delete row.id;
         delete row.created_at;
         delete row.updated_at;
@@ -171,7 +195,20 @@ async function handleSupabaseRequest(endpoint, options = {}) {
           row.department_id = null;
         }
 
-        const { data, error } = await sb.from('club_members').insert([row]).select('*, departments(name, icon)').single();
+        // Whitelist exact club_members columns supported by Supabase PostgreSQL schema
+        const allowedMemberCols = new Set([
+          'full_name', 'college_id', 'email', 'phone', 'year', 'branch',
+          'section', 'position', 'department_id', 'profile_photo',
+          'joining_date', 'status', 'notes', 'is_demo', 'created_by', 'updated_by'
+        ]);
+        const cleanRow = {};
+        for (const [k, v] of Object.entries(row)) {
+          if (allowedMemberCols.has(k)) {
+            cleanRow[k] = v;
+          }
+        }
+
+        const { data, error } = await sb.from('club_members').insert([cleanRow]).select('*, departments(name, icon)').single();
         if (error) throw new Error(error.message);
 
         return {
@@ -201,6 +238,30 @@ async function handleSupabaseRequest(endpoint, options = {}) {
             row = { ...options.body };
           }
 
+          // Map profile_photo_url to profile_photo column for Supabase schema
+          if ('profile_photo_url' in row) {
+            if (row.profile_photo_url) {
+              row.profile_photo = row.profile_photo_url;
+            }
+            delete row.profile_photo_url;
+          }
+
+          // Support image file upload conversion to Data URL for Supabase if provided
+          if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
+            const avatarVal = options.body.get('avatar');
+            if (avatarVal && typeof avatarVal === 'object' && avatarVal.size > 0) {
+              try {
+                const dataUrl = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result);
+                  reader.onerror = () => resolve(null);
+                  reader.readAsDataURL(avatarVal);
+                });
+                if (dataUrl) row.profile_photo = dataUrl;
+              } catch (e) {}
+            }
+          }
+
           delete row.id;
           delete row.created_at;
           delete row.updated_at;
@@ -228,12 +289,25 @@ async function handleSupabaseRequest(endpoint, options = {}) {
           }
           row.updated_at = new Date().toISOString();
 
+          // Whitelist exact club_members columns supported by Supabase PostgreSQL schema
+          const allowedMemberCols = new Set([
+            'full_name', 'college_id', 'email', 'phone', 'year', 'branch',
+            'section', 'position', 'department_id', 'profile_photo',
+            'joining_date', 'status', 'notes', 'is_demo', 'created_by', 'updated_by'
+          ]);
+          const cleanRow = {};
+          for (const [k, v] of Object.entries(row)) {
+            if (allowedMemberCols.has(k)) {
+              cleanRow[k] = v;
+            }
+          }
+
           // 1. Try update by numeric ID
-          let { data, error } = await sb.from('club_members').update(row).eq('id', memberId).select('*, departments(name, icon)').single();
+          let { data, error } = await sb.from('club_members').update(cleanRow).eq('id', memberId).select('*, departments(name, icon)').single();
 
           // 2. Fallback to college_id if id mismatch
-          if (error && row.college_id) {
-            const res2 = await sb.from('club_members').update(row).eq('college_id', row.college_id).select('*, departments(name, icon)').single();
+          if (error && cleanRow.college_id) {
+            const res2 = await sb.from('club_members').update(cleanRow).eq('college_id', cleanRow.college_id).select('*, departments(name, icon)').single();
             if (!res2.error && res2.data) {
               data = res2.data;
               error = null;

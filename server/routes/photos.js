@@ -7,10 +7,10 @@ const { requireAuth } = require('../auth');
 const { logActivity } = require('../activity');
 const { upload, uploadsBase } = require('../upload');
 
-// GET /api/photos (list photos, optional program_id filter)
+// GET /api/photos (list photos, optional program_id or program_code filter)
 router.get('/', requireAuth, (req, res) => {
   try {
-    const { program_id } = req.query;
+    const { program_id, program_code } = req.query;
     let query = `
       SELECT p.*, pr.name as program_name, pr.program_code
       FROM photos p
@@ -18,9 +18,14 @@ router.get('/', requireAuth, (req, res) => {
     `;
     const params = [];
 
-    if (program_id) {
-      query += ` WHERE p.program_id = ?`;
-      params.push(Number(program_id));
+    if (program_code && program_code.trim()) {
+      const code = program_code.trim();
+      query += ` WHERE (pr.program_code = ? OR p.program_id IN (SELECT id FROM programs WHERE program_code = ?))`;
+      params.push(code, code);
+    } else if (program_id) {
+      const pid = Number(program_id);
+      query += ` WHERE (p.program_id = ? OR pr.id = ?)`;
+      params.push(pid, pid);
     }
 
     query += ` ORDER BY p.id DESC`;
@@ -35,8 +40,20 @@ router.get('/', requireAuth, (req, res) => {
 // POST /api/photos (upload photo or provide URL)
 router.post('/', requireAuth, upload.array('photo', 10), (req, res) => {
   try {
-    const { program_id, caption, photo_url } = req.body;
-    const progId = program_id ? Number(program_id) : null;
+    const { program_id, program_code, caption, photo_url } = req.body;
+    let progId = program_id ? Number(program_id) : null;
+
+    // Resolve program ID via program_code fallback if needed
+    if (progId) {
+      const exists = db.prepare('SELECT id FROM programs WHERE id = ?').get(progId);
+      if (!exists && program_code) {
+        const byCode = db.prepare('SELECT id FROM programs WHERE program_code = ?').get(program_code.trim());
+        if (byCode) progId = byCode.id;
+      }
+    } else if (program_code && program_code.trim()) {
+      const byCode = db.prepare('SELECT id FROM programs WHERE program_code = ?').get(program_code.trim());
+      if (byCode) progId = byCode.id;
+    }
 
     const insertedPhotos = [];
     const insertStmt = db.prepare(`

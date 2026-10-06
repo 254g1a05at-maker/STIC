@@ -93,6 +93,7 @@ export default function ProgramDetailView({ programId, onBack, showToast, allMem
     try {
       const data = new FormData();
       data.append('program_id', programId);
+      if (program?.program_code) data.append('program_code', program.program_code);
       if (photoCaption) data.append('caption', photoCaption);
       if (photoUrl) data.append('photo_url', photoUrl);
       if (photoFiles && photoFiles.length > 0) {

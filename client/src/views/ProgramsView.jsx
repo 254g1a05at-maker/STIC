@@ -15,6 +15,8 @@ import {
   Calendar,
   Sparkles,
   ChevronRight,
+  Upload,
+  Image as ImageIcon,
   X
 } from 'lucide-react';
 import { api } from '../api';
@@ -736,21 +738,22 @@ export default function ProgramsView({
                         gap: '14px',
                         padding: '12px 14px',
                         borderRadius: '10px',
-                        background: 'rgba(15, 23, 42, 0.65)',
-                        border: '1px solid var(--border-subtle)',
+                        background: 'rgba(15, 23, 42, 0.75)',
+                        border: '1px solid rgba(52, 211, 153, 0.3)',
                         marginBottom: '10px'
                       }}>
                         <div style={{
-                          width: '70px',
-                          height: '70px',
+                          width: '74px',
+                          height: '74px',
                           borderRadius: '8px',
                           overflow: 'hidden',
                           background: '#0d1624',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
                           flexShrink: 0,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          position: 'relative'
                         }}>
                           <img
                             src={posterFile ? URL.createObjectURL(posterFile) : formData.poster_url}
@@ -758,12 +761,18 @@ export default function ProgramsView({
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextSibling) {
+                                e.currentTarget.nextSibling.style.display = 'flex';
+                              }
                             }}
                           />
+                          <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)' }}>
+                            <ImageIcon size={24} opacity={0.5} />
+                          </div>
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
                               {posterFile ? 'New Image Selected' : 'Saved Poster Active'}
                             </span>
                             {posterFile && (
@@ -782,13 +791,16 @@ export default function ProgramsView({
                           }}>
                             {posterFile ? posterFile.name : (formData.poster_url.startsWith('data:') ? 'Stored Poster Image' : formData.poster_url)}
                           </p>
+                          <p style={{ margin: '2px 0 0 0', fontSize: '0.74rem', color: '#94a3b8' }}>
+                            {posterFile ? 'Click "Save Program" to apply this image.' : 'This poster is currently active for this event.'}
+                          </p>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                           <label
                             className="btn btn-secondary btn-sm"
                             style={{ cursor: 'pointer', margin: 0, fontSize: '0.78rem' }}
                           >
-                            Change
+                            Upload New
                             <input
                               type="file"
                               accept="image/*"
@@ -818,23 +830,25 @@ export default function ProgramsView({
 
                     {/* Upload / URL Input Controls */}
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="form-input"
-                        style={{ flex: 1, minWidth: '200px' }}
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            setPosterFile(e.target.files[0]);
-                            setFormData(prev => ({ ...prev, poster_removed: false }));
-                          }
-                        }}
-                      />
+                      <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Upload size={15} /> Choose Poster File
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setPosterFile(e.target.files[0]);
+                              setFormData(prev => ({ ...prev, poster_removed: false }));
+                            }
+                          }}
+                        />
+                      </label>
                       <input
                         type="text"
                         className="form-input"
-                        style={{ flex: 1, minWidth: '200px' }}
-                        placeholder="Or direct poster image URL"
+                        style={{ flex: 1, minWidth: '220px' }}
+                        placeholder="Or enter direct poster image URL (https://...)"
                         value={formData.poster_url && !formData.poster_url.startsWith('data:') ? formData.poster_url : ''}
                         onChange={(e) => {
                           setPosterFile(null);

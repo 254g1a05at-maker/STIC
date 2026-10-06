@@ -50,7 +50,11 @@ export default function PhotosView({ showToast, allPrograms, openAddTrigger, onC
     try {
       setLoading(true);
       const params = {};
-      if (selectedProgram) params.program_id = selectedProgram;
+      if (selectedProgram) {
+        params.program_id = selectedProgram;
+        const pObj = allPrograms?.find(p => String(p.id) === String(selectedProgram));
+        if (pObj?.program_code) params.program_code = pObj.program_code;
+      }
       const res = await api.getPhotos(params);
       setPhotos(res.data || []);
     } catch (err) {
@@ -117,7 +121,11 @@ export default function PhotosView({ showToast, allPrograms, openAddTrigger, onC
     e.preventDefault();
     try {
       const data = new FormData();
-      if (programId) data.append('program_id', programId);
+      if (programId) {
+        data.append('program_id', programId);
+        const pObj = allPrograms?.find(p => String(p.id) === String(programId));
+        if (pObj?.program_code) data.append('program_code', pObj.program_code);
+      }
       if (photoCaption) data.append('caption', photoCaption);
       if (photoUrl) data.append('photo_url', photoUrl);
       if (photoFiles && photoFiles.length > 0) {

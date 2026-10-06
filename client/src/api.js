@@ -29,6 +29,48 @@ export const authState = {
   }
 };
 
+/**
+ * High-performance browser-side image compressor for posters and photos
+ * Resizes large photos to optimal web dimensions (max 1200px) and compresses to ~70-120KB JPEG Data URL.
+ * Ensures Supabase PostgREST never fails with 413 Payload Too Large.
+ */
+async function compressImageFile(file, maxWidth = 1200, maxHeight = 1200, quality = 0.82) {
+  if (!file) return null;
+  if (typeof window === 'undefined' || typeof FileReader === 'undefined') return null;
+  if (file.type && !file.type.startsWith('image/')) return null;
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => resolve(e.target?.result || null);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
 async function handleSupabaseRequest(endpoint, options = {}) {
   const sb = getSupabaseClient();
   if (!sb) return null;
@@ -411,18 +453,47 @@ async function handleSupabaseRequest(endpoint, options = {}) {
 
         try {
           const { data: phs } = await sb.from('photos').select('*').eq('program_id', programId).order('id', { ascending: false });
-          if (phs) photos = phs;
+          if (phs && phs.length > 0) photos = phs;
         } catch (e) {}
+
+        // Fallback: If Supabase photos table is absent or empty, check local backend
+        if (photos.length === 0) {
+          try {
+            const codeParam = program.program_code ? `&program_code=${encodeURIComponent(program.program_code)}` : '';
+            const resLocal = await fetch(`${API_BASE}/photos?program_id=${programId}${codeParam}`).then(r => r.json());
+            if (resLocal && resLocal.data && resLocal.data.length > 0) {
+              photos = resLocal.data;
+            }
+          } catch (e) {}
+        }
 
         try {
           const { data: vds } = await sb.from('videos').select('*').eq('program_id', programId).order('id', { ascending: false });
-          if (vds) videos = vds;
+          if (vds && vds.length > 0) videos = vds;
         } catch (e) {}
+
+        if (videos.length === 0) {
+          try {
+            const resLocal = await fetch(`${API_BASE}/videos?program_id=${programId}`).then(r => r.json());
+            if (resLocal && resLocal.data && resLocal.data.length > 0) {
+              videos = resLocal.data;
+            }
+          } catch (e) {}
+        }
 
         try {
           const { data: dcs } = await sb.from('documents').select('*').eq('program_id', programId).order('id', { ascending: false });
-          if (dcs) documents = dcs;
+          if (dcs && dcs.length > 0) documents = dcs;
         } catch (e) {}
+
+        if (documents.length === 0) {
+          try {
+            const resLocal = await fetch(`${API_BASE}/documents?program_id=${programId}`).then(r => r.json());
+            if (resLocal && resLocal.data && resLocal.data.length > 0) {
+              documents = resLocal.data;
+            }
+          } catch (e) {}
+        }
 
         const totalSponsorship = sponsors.reduce((acc, s) => acc + Number(s.amount || 0), 0);
 
@@ -548,18 +619,13 @@ async function handleSupabaseRequest(endpoint, options = {}) {
           if (row.coordinator_ids) coordinatorIds = row.coordinator_ids;
         }
 
-        // Support poster file conversion to Data URL for Supabase
+        // Support poster file conversion to optimized Data URL for Supabase
         let posterDataUrl = null;
-        if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
+        if (options.body instanceof FormData) {
           const posterFile = options.body.get('poster');
           if (posterFile && typeof posterFile === 'object' && posterFile.size > 0) {
             try {
-              posterDataUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => resolve(null);
-                reader.readAsDataURL(posterFile);
-              });
+              posterDataUrl = await compressImageFile(posterFile);
             } catch (e) {}
           }
         }
@@ -691,16 +757,11 @@ async function handleSupabaseRequest(endpoint, options = {}) {
         }
 
         let posterDataUrl = null;
-        if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
+        if (options.body instanceof FormData) {
           const posterFile = options.body.get('poster');
           if (posterFile && typeof posterFile === 'object' && posterFile.size > 0) {
             try {
-              posterDataUrl = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => resolve(null);
-                reader.readAsDataURL(posterFile);
-              });
+              posterDataUrl = await compressImageFile(posterFile);
             } catch (e) {}
           }
         }

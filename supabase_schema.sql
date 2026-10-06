@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS club_members (
   position TEXT DEFAULT 'Club Member',
   department_id BIGINT REFERENCES departments(id) ON DELETE SET NULL,
   profile_photo TEXT,
+  profile_photo_url TEXT,
   joining_date DATE DEFAULT CURRENT_DATE,
   status TEXT DEFAULT 'Active',
   notes TEXT,

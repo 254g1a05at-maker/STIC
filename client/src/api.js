@@ -549,17 +549,17 @@ async function handleSupabaseRequest(endpoint, options = {}) {
         }
 
         // Support poster file conversion to Data URL for Supabase
+        let posterDataUrl = null;
         if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
           const posterFile = options.body.get('poster');
           if (posterFile && typeof posterFile === 'object' && posterFile.size > 0) {
             try {
-              const dataUrl = await new Promise((resolve) => {
+              posterDataUrl = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = () => resolve(null);
                 reader.readAsDataURL(posterFile);
               });
-              if (dataUrl) row.poster_url = dataUrl;
             } catch (e) {}
           }
         }
@@ -611,7 +611,16 @@ async function handleSupabaseRequest(endpoint, options = {}) {
         row.description = row.description ? row.description.trim() : null;
         row.participants_count = row.participants_count ? Number(row.participants_count) : 0;
         row.status = row.status || 'Planned';
-        row.poster_url = row.poster_url || null;
+
+        if (posterDataUrl) {
+          row.poster_url = posterDataUrl;
+        } else if (row.poster_url && row.poster_url.trim()) {
+          row.poster_url = row.poster_url.trim();
+        } else {
+          row.poster_url = null;
+        }
+        delete row.poster_removed;
+
         row.is_demo = row.is_demo ? 1 : 0;
         row.created_by = authState.getUser()?.username || 'admin';
         row.updated_by = authState.getUser()?.username || 'admin';
@@ -681,17 +690,17 @@ async function handleSupabaseRequest(endpoint, options = {}) {
           if ('coordinator_ids' in row) coordinatorIds = row.coordinator_ids;
         }
 
+        let posterDataUrl = null;
         if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
           const posterFile = options.body.get('poster');
           if (posterFile && typeof posterFile === 'object' && posterFile.size > 0) {
             try {
-              const dataUrl = await new Promise((resolve) => {
+              posterDataUrl = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = () => resolve(null);
                 reader.readAsDataURL(posterFile);
               });
-              if (dataUrl) row.poster_url = dataUrl;
             } catch (e) {}
           }
         }
@@ -709,6 +718,17 @@ async function handleSupabaseRequest(endpoint, options = {}) {
         if ('participants_count' in row) row.participants_count = Number(row.participants_count) || 0;
         row.updated_by = authState.getUser()?.username || 'admin';
         row.updated_at = new Date().toISOString();
+
+        if (posterDataUrl) {
+          row.poster_url = posterDataUrl;
+        } else if (row.poster_removed === 'true' || row.poster_removed === true) {
+          row.poster_url = null;
+        } else if (row.poster_url && row.poster_url.trim()) {
+          row.poster_url = row.poster_url.trim();
+        } else {
+          delete row.poster_url;
+        }
+        delete row.poster_removed;
 
         const allowedProgCols = new Set([
           'program_code', 'name', 'program_date', 'start_time', 'end_time', 'venue',

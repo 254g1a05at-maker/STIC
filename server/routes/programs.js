@@ -362,7 +362,9 @@ router.put('/:id', requireAuth, upload.single('poster'), (req, res) => {
     let poster = existing.poster_url;
     if (req.file) {
       poster = `/uploads/posters/${req.file.filename}`;
-    } else if (poster_url !== undefined) {
+    } else if (req.body.poster_removed === 'true' || req.body.poster_removed === true) {
+      poster = null;
+    } else if (poster_url !== undefined && poster_url !== '') {
       poster = poster_url;
     }
 

@@ -149,6 +149,7 @@ export default function ProgramsView({
       participants_count: 50,
       status: 'Planned',
       poster_url: '',
+      poster_removed: false,
       coordinator_ids: []
     });
     setPosterFile(null);
@@ -172,6 +173,7 @@ export default function ProgramsView({
       participants_count: prog.participants_count || 0,
       status: prog.status || 'Planned',
       poster_url: prog.poster_url || '',
+      poster_removed: false,
       coordinator_ids: (prog.coordinators || []).map(c => c.member_id)
     });
     setPosterFile(null);
@@ -717,20 +719,127 @@ export default function ProgramsView({
                   </div>
 
                   <div className="form-group form-full">
-                    <label className="form-label">Program Poster (Upload file or enter URL)</label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Program Poster (Banner / Flier Image)</span>
+                      {(posterFile || formData.poster_url) && (
+                        <span style={{ fontSize: '0.74rem', color: '#34d399', fontWeight: 600 }}>
+                          ✓ Poster Active
+                        </span>
+                      )}
+                    </label>
+
+                    {/* Poster Preview Box if file or URL exists */}
+                    {(posterFile || formData.poster_url) ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        background: 'rgba(15, 23, 42, 0.65)',
+                        border: '1px solid var(--border-subtle)',
+                        marginBottom: '10px'
+                      }}>
+                        <div style={{
+                          width: '70px',
+                          height: '70px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          background: '#0d1624',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <img
+                            src={posterFile ? URL.createObjectURL(posterFile) : formData.poster_url}
+                            alt="Program Poster Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                              {posterFile ? 'New Image Selected' : 'Saved Poster Active'}
+                            </span>
+                            {posterFile && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
+                                ({Math.round(posterFile.size / 1024)} KB)
+                              </span>
+                            )}
+                          </div>
+                          <p style={{
+                            margin: '4px 0 0 0',
+                            fontSize: '0.8rem',
+                            color: 'var(--text-muted)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {posterFile ? posterFile.name : (formData.poster_url.startsWith('data:') ? 'Stored Poster Image' : formData.poster_url)}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                          <label
+                            className="btn btn-secondary btn-sm"
+                            style={{ cursor: 'pointer', margin: 0, fontSize: '0.78rem' }}
+                          >
+                            Change
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setPosterFile(e.target.files[0]);
+                                  setFormData(prev => ({ ...prev, poster_removed: false }));
+                                }
+                              }}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            style={{ color: '#fb7185', borderColor: 'rgba(251, 113, 133, 0.3)', fontSize: '0.78rem' }}
+                            onClick={() => {
+                              setPosterFile(null);
+                              setFormData(prev => ({ ...prev, poster_url: '', poster_removed: true }));
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Upload / URL Input Controls */}
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <input
                         type="file"
                         accept="image/*"
                         className="form-input"
-                        onChange={(e) => setPosterFile(e.target.files[0] || null)}
+                        style={{ flex: 1, minWidth: '200px' }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setPosterFile(e.target.files[0]);
+                            setFormData(prev => ({ ...prev, poster_removed: false }));
+                          }
+                        }}
                       />
                       <input
                         type="text"
                         className="form-input"
+                        style={{ flex: 1, minWidth: '200px' }}
                         placeholder="Or direct poster image URL"
-                        value={formData.poster_url}
-                        onChange={(e) => setFormData({ ...formData, poster_url: e.target.value })}
+                        value={formData.poster_url && !formData.poster_url.startsWith('data:') ? formData.poster_url : ''}
+                        onChange={(e) => {
+                          setPosterFile(null);
+                          setFormData({ ...formData, poster_url: e.target.value, poster_removed: !e.target.value });
+                        }}
                       />
                     </div>
                   </div>

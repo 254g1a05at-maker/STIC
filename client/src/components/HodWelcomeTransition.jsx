@@ -226,7 +226,7 @@ export default function HodWelcomeTransition({ onComplete }) {
               }}
             >
               <img
-                src="/hod_salute.png"
+                src="/hod_salute.png?v=apple_salute"
                 alt="🫡"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';

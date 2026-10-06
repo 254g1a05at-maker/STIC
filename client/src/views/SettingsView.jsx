@@ -22,16 +22,28 @@ import {
   Camera,
   Upload,
   Image,
-  UserCheck
+  UserCheck,
+  Database,
+  ExternalLink,
+  Copy,
+  Check
 } from 'lucide-react';
 import { api, authState } from '../api';
+import { getSupabaseConfig, saveSupabaseConfig, testSupabaseConnection, isSupabaseConfigured } from '../supabase';
 
 export default function SettingsView({ showToast, onRefreshStats }) {
   const user = authState.getUser();
   const isWebsiteHandler = user?.role === 'STIC Website Handler';
 
   const [currentUser, setCurrentUser] = useState(user);
-  const [activeTab, setActiveTab] = useState('account'); // 'account', 'club', 'permissions', 'demo', 'audit'
+  const [activeTab, setActiveTab] = useState('account'); // 'account', 'club', 'permissions', 'database', 'demo', 'audit'
+
+  // Supabase Configuration State
+  const [supabaseUrl, setSupabaseUrl] = useState(() => getSupabaseConfig().url);
+  const [supabaseKey, setSupabaseKey] = useState(() => getSupabaseConfig().key);
+  const [testingSupabase, setTestingSupabase] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState(null);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   // Display Picture (DP) State
   const fileInputRef = useRef(null);
@@ -358,6 +370,12 @@ export default function SettingsView({ showToast, onRefreshStats }) {
           onClick={() => setActiveTab('permissions')}
         >
           <Globe size={16} /> Website Handler Permissions
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'database' ? 'active' : ''}`}
+          onClick={() => setActiveTab('database')}
+        >
+          <Database size={16} /> Cloud Database (Supabase)
         </button>
         {!isWebsiteHandler && (
           <>
@@ -1044,6 +1062,222 @@ export default function SettingsView({ showToast, onRefreshStats }) {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: CLOUD DATABASE (SUPABASE) */}
+      {activeTab === 'database' && (
+        <div style={{ maxWidth: '820px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          {/* Connection Status Card */}
+          <div className="stic-card">
+            <div className="card-header-bar">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Database size={18} color="var(--primary-light)" />
+                <h3 style={{ margin: 0 }}>Supabase PostgreSQL Cloud Connection</h3>
+              </div>
+              <span
+                className={`badge ${isSupabaseConfigured() ? 'badge-success' : 'badge-neutral'}`}
+                style={{ fontWeight: 700 }}
+              >
+                {isSupabaseConfigured() ? '🟢 Cloud Database Active' : '⚪ Using Local SQLite'}
+              </span>
+            </div>
+
+            <div className="card-body">
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '20px' }}>
+                Connect your STIC web portal directly to a free <strong>Supabase</strong> PostgreSQL database in the cloud.
+                When configured, all club members, departments, and programs will be saved and accessed from Supabase online!
+              </p>
+
+              {/* Status Alert */}
+              {supabaseStatus && (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    background: supabaseStatus.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                    border: `1px solid ${supabaseStatus.success ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)'}`,
+                    color: supabaseStatus.success ? '#34d399' : '#fb7185'
+                  }}
+                >
+                  {supabaseStatus.success ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                  <span>{supabaseStatus.message}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Project URL */}
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>
+                    Supabase Project URL *
+                  </label>
+                  <input
+                    type="url"
+                    className="form-input"
+                    placeholder="https://your-project-ref.supabase.co"
+                    value={supabaseUrl}
+                    onChange={(e) => {
+                      setSupabaseUrl(e.target.value);
+                      setSupabaseStatus(null);
+                    }}
+                  />
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-subtle)', marginTop: '4px' }}>
+                    Found in Supabase: Project Settings → API → Project URL
+                  </span>
+                </div>
+
+                {/* Anon API Key */}
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>
+                    Supabase anon / public API Key *
+                  </label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    value={supabaseKey}
+                    onChange={(e) => {
+                      setSupabaseKey(e.target.value);
+                      setSupabaseStatus(null);
+                    }}
+                  />
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-subtle)', marginTop: '4px' }}>
+                    Found in Supabase: Project Settings → API → Project API Keys (anon public)
+                  </span>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={testingSupabase || !supabaseUrl || !supabaseKey}
+                    onClick={async () => {
+                      setTestingSupabase(true);
+                      setSupabaseStatus(null);
+                      const res = await testSupabaseConnection(supabaseUrl, supabaseKey);
+                      setTestingSupabase(false);
+                      setSupabaseStatus(res);
+                      if (res.success) {
+                        showToast('success', 'Connection Validated', 'Connected to Supabase cloud database!');
+                      } else {
+                        showToast('error', 'Connection Failed', res.message);
+                      }
+                    }}
+                  >
+                    <RefreshCw size={15} className={testingSupabase ? 'spin' : ''} />
+                    {testingSupabase ? 'Testing Connection...' : 'Test Connection'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={!supabaseUrl || !supabaseKey}
+                    onClick={() => {
+                      saveSupabaseConfig(supabaseUrl, supabaseKey);
+                      setSupabaseStatus({ success: true, message: 'Supabase credentials saved! The portal will now synchronize with your cloud database.' });
+                      showToast('success', 'Supabase Connected', 'Cloud database credentials saved successfully.');
+                    }}
+                  >
+                    <Save size={15} /> Save Cloud Connection
+                  </button>
+
+                  {isSupabaseConfigured() && (
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ borderColor: 'rgba(244, 63, 94, 0.4)', color: '#fb7185' }}
+                      onClick={() => {
+                        saveSupabaseConfig('', '');
+                        setSupabaseUrl('');
+                        setSupabaseKey('');
+                        setSupabaseStatus({ success: true, message: 'Disconnected from Supabase. Restored to local SQLite.' });
+                        showToast('info', 'Disconnected', 'Restored to local SQLite database.');
+                      }}
+                    >
+                      <Trash2 size={15} /> Disconnect Cloud
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Setup Instructions & SQL Script Card */}
+          <div className="stic-card">
+            <div className="card-header-bar">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileCheck size={18} color="var(--primary-light)" />
+                <h3 style={{ margin: 0 }}>3-Step Supabase Setup Guide</h3>
+              </div>
+              <a
+                href="https://supabase.com/dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary btn-sm"
+                style={{ textDecoration: 'none' }}
+              >
+                <span>Open Supabase</span>
+                <ExternalLink size={14} />
+              </a>
+            </div>
+
+            <div className="card-body">
+              <ol style={{ paddingLeft: '20px', fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.7, margin: '0 0 20px 0' }}>
+                <li>
+                  Go to <a href="https://supabase.com" target="_blank" rel="noreferrer" style={{ color: 'var(--primary-light)', fontWeight: 600 }}>supabase.com</a> and sign in (Free).
+                </li>
+                <li>
+                  Click <strong>New Project</strong> and name it <code>STIC</code>.
+                </li>
+                <li>
+                  In your Supabase project, go to the <strong>SQL Editor</strong> tab on the left.
+                </li>
+                <li>
+                  Copy and paste the generated script <code>supabase_schema.sql</code> (all 74 members, sections, and tables are included) and click <strong>Run</strong>.
+                </li>
+                <li>
+                  Go to <strong>Project Settings → API</strong>, copy your <strong>Project URL</strong> and <strong>anon key</strong>, and paste them above!
+                </li>
+              </ol>
+
+              <div style={{ background: 'var(--bg-surface-elevated)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)' }}>
+                    📄 Ready-to-Run SQL Script: <code>supabase_schema.sql</code>
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                    Contains all tables, RLS security policies, and all 74 enrolled club members with their sections (CSE-A to CSE-F).
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/supabase_schema.sql');
+                      const text = await res.text();
+                      await navigator.clipboard.writeText(text);
+                      setCopiedSql(true);
+                      showToast('success', 'Copied to Clipboard', 'supabase_schema.sql copied! Paste it in Supabase SQL Editor.');
+                      setTimeout(() => setCopiedSql(false), 3000);
+                    } catch (e) {
+                      showToast('info', 'File Saved', 'The file "supabase_schema.sql" is saved in your project root directory.');
+                    }
+                  }}
+                >
+                  {copiedSql ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
+                  <span>{copiedSql ? 'Copied SQL Script!' : 'Copy SQL Script'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

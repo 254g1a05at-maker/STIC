@@ -1,3 +1,5 @@
+import { getSupabaseClient, isSupabaseConfigured } from './supabase';
+
 // STIC Client API Client
 
 const API_BASE = '/api';
@@ -27,6 +29,301 @@ export const authState = {
   }
 };
 
+async function handleSupabaseRequest(endpoint, options = {}) {
+  const sb = getSupabaseClient();
+  if (!sb) return null;
+
+  try {
+    const method = (options.method || 'GET').toUpperCase();
+
+    // 1. Members endpoint
+    if (endpoint.startsWith('/members')) {
+      // 1A. Single Member GET: /members/:id
+      const singleMatch = endpoint.match(/^\/members\/(\d+)$/);
+      if (singleMatch && method === 'GET') {
+        const id = Number(singleMatch[1]);
+        let { data, error } = await sb.from('club_members').select('*, departments(name, icon)').eq('id', id).single();
+        if (error) {
+          const res2 = await sb.from('club_members').select('*, departments(name, icon)').eq('college_id', String(id)).single();
+          if (res2.data) { data = res2.data; error = null; }
+        }
+        if (error || !data) return null;
+        return {
+          success: true,
+          data: {
+            ...data,
+            department_name: data.departments?.name || null,
+            department_icon: data.departments?.icon || null
+          }
+        };
+      }
+
+      // 1B. List Members GET: /members or /members?...
+      if (method === 'GET') {
+        let query = sb.from('club_members').select('*, departments(name, icon)');
+
+        if (endpoint.includes('?')) {
+          const queryStr = endpoint.substring(endpoint.indexOf('?') + 1);
+          const params = new URLSearchParams(queryStr);
+
+          const section = params.get('section');
+          if (section) {
+            query = query.or(`section.eq.${section},notes.ilike.%Section: ${section}%,branch.ilike.%(${section})%`);
+          }
+
+          const deptId = params.get('department_id');
+          if (deptId) {
+            if (deptId === 'unassigned') {
+              query = query.is('department_id', null);
+            } else if (!isNaN(Number(deptId))) {
+              query = query.eq('department_id', Number(deptId));
+            }
+          }
+
+          const year = params.get('year');
+          if (year) query = query.eq('year', year);
+
+          const status = params.get('status');
+          if (status) query = query.eq('status', status);
+
+          const role = params.get('role') || params.get('position');
+          if (role) query = query.ilike('position', `%${role}%`);
+
+          const search = params.get('search');
+          if (search && search.trim()) {
+            const s = search.trim();
+            query = query.or(`full_name.ilike.%${s}%,college_id.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%,position.ilike.%${s}%,section.ilike.%${s}%`);
+          }
+
+          const sortBy = params.get('sort_by');
+          const order = params.get('order');
+          const isAsc = order !== 'DESC';
+
+          if (sortBy === 'year') {
+            query = query.order('year', { ascending: isAsc });
+          } else if (sortBy === 'joining_date') {
+            query = query.order('joining_date', { ascending: isAsc });
+          } else if (sortBy === 'name_desc') {
+            query = query.order('full_name', { ascending: false });
+          } else {
+            query = query.order('full_name', { ascending: isAsc });
+          }
+        } else {
+          query = query.order('full_name', { ascending: true });
+        }
+
+        const { data, error } = await query;
+        if (error) {
+          console.warn('[Supabase GET Members Error]', error);
+          return null;
+        }
+
+        const formatted = (data || []).map(m => ({
+          ...m,
+          department_name: m.departments?.name || null,
+          department_icon: m.departments?.icon || null
+        }));
+
+        return { success: true, count: formatted.length, data: formatted };
+      }
+
+      // 1C. Create Member POST: /members
+      if (method === 'POST') {
+        let row = {};
+        if (options.body instanceof FormData) {
+          options.body.forEach((val, key) => {
+            if (key !== 'avatar') row[key] = val;
+          });
+        } else if (typeof options.body === 'string') {
+          try { row = JSON.parse(options.body); } catch (e) { row = {}; }
+        } else if (options.body) {
+          row = { ...options.body };
+        }
+
+        delete row.id;
+        delete row.created_at;
+        delete row.updated_at;
+        delete row.departments;
+        delete row.department_name;
+        delete row.department_icon;
+        delete row.programs_coordinated_count;
+        delete row.avatar;
+
+        if (!row.full_name || !row.college_id || !row.email) {
+          throw new Error('Full Name, College ID, and Email are required.');
+        }
+
+        row.college_id = row.college_id.trim();
+        row.full_name = row.full_name.trim();
+        row.email = row.email.trim();
+        row.phone = row.phone ? row.phone.trim() : null;
+        row.year = row.year || '2nd Year';
+        row.branch = row.branch || 'Computer Science & Engineering';
+        row.section = row.section ? row.section.trim() : null;
+        row.position = row.position ? row.position.trim() : 'Club Member';
+        row.status = row.status || 'Active';
+        row.notes = row.notes ? row.notes.trim() : null;
+        row.joining_date = row.joining_date || new Date().toISOString().split('T')[0];
+
+        if (row.department_id && row.department_id !== 'unassigned' && row.department_id !== 'null' && !isNaN(Number(row.department_id))) {
+          row.department_id = Number(row.department_id);
+        } else {
+          row.department_id = null;
+        }
+
+        const { data, error } = await sb.from('club_members').insert([row]).select('*, departments(name, icon)').single();
+        if (error) throw new Error(error.message);
+
+        return {
+          success: true,
+          message: 'Member added successfully to Supabase cloud database.',
+          data: {
+            ...data,
+            department_name: data?.departments?.name || null,
+            department_icon: data?.departments?.icon || null
+          }
+        };
+      }
+
+      // 1D. Update Member PUT: /members/:id
+      if (method === 'PUT') {
+        const idMatch = endpoint.match(/\/members\/(\d+)/);
+        if (idMatch) {
+          const memberId = Number(idMatch[1]);
+          let row = {};
+          if (options.body instanceof FormData) {
+            options.body.forEach((val, key) => {
+              if (key !== 'avatar') row[key] = val;
+            });
+          } else if (typeof options.body === 'string') {
+            try { row = JSON.parse(options.body); } catch (e) { row = {}; }
+          } else if (options.body) {
+            row = { ...options.body };
+          }
+
+          delete row.id;
+          delete row.created_at;
+          delete row.updated_at;
+          delete row.departments;
+          delete row.department_name;
+          delete row.department_icon;
+          delete row.programs_coordinated_count;
+          delete row.avatar;
+
+          if (row.college_id) row.college_id = row.college_id.trim();
+          if (row.full_name) row.full_name = row.full_name.trim();
+          if (row.email) row.email = row.email.trim();
+          if ('phone' in row) row.phone = row.phone ? row.phone.trim() : null;
+          if ('section' in row) row.section = row.section ? row.section.trim() : null;
+          if ('position' in row) row.position = row.position ? row.position.trim() : 'Club Member';
+          if ('status' in row) row.status = row.status ? row.status.trim() : 'Active';
+          if ('notes' in row) row.notes = row.notes ? row.notes.trim() : null;
+
+          if ('department_id' in row) {
+            if (row.department_id && row.department_id !== 'unassigned' && row.department_id !== 'null' && !isNaN(Number(row.department_id))) {
+              row.department_id = Number(row.department_id);
+            } else {
+              row.department_id = null;
+            }
+          }
+          row.updated_at = new Date().toISOString();
+
+          // 1. Try update by numeric ID
+          let { data, error } = await sb.from('club_members').update(row).eq('id', memberId).select('*, departments(name, icon)').single();
+
+          // 2. Fallback to college_id if id mismatch
+          if (error && row.college_id) {
+            const res2 = await sb.from('club_members').update(row).eq('college_id', row.college_id).select('*, departments(name, icon)').single();
+            if (!res2.error && res2.data) {
+              data = res2.data;
+              error = null;
+            }
+          }
+
+          if (error) throw new Error(error.message);
+
+          return {
+            success: true,
+            message: 'Member updated successfully in Supabase cloud database.',
+            data: {
+              ...data,
+              department_name: data?.departments?.name || null,
+              department_icon: data?.departments?.icon || null
+            }
+          };
+        }
+      }
+
+      // 1E. Delete Member DELETE: /members/:id
+      if (method === 'DELETE') {
+        const idMatch = endpoint.match(/\/members\/(\d+)/);
+        if (idMatch) {
+          const memberId = Number(idMatch[1]);
+          const { error } = await sb.from('club_members').delete().eq('id', memberId);
+          if (error) throw new Error(error.message);
+          return { success: true, message: 'Member deleted from Supabase cloud database.' };
+        }
+      }
+    }
+
+    // 2. Departments endpoint
+    if (endpoint.startsWith('/departments')) {
+      if (method === 'GET') {
+        const { data, error } = await sb.from('departments').select('*').order('name', { ascending: true });
+        if (!error && data) return { success: true, count: data.length, data };
+      }
+    }
+
+    // 3. Programs endpoint
+    if (endpoint.startsWith('/programs')) {
+      if (method === 'GET') {
+        const { data, error } = await sb.from('programs').select('*').order('program_date', { ascending: false });
+        if (!error && data) return { success: true, count: data.length, data };
+      }
+    }
+
+    // 4. Dashboard Stats endpoint
+    if (endpoint.startsWith('/dashboard/stats')) {
+      const [{ count: totalMembers }, { count: activeMembers }, { count: totalDepts }, { count: totalPrograms }] = await Promise.all([
+        sb.from('club_members').select('*', { count: 'exact', head: true }),
+        sb.from('club_members').select('*', { count: 'exact', head: true }).eq('status', 'Active'),
+        sb.from('departments').select('*', { count: 'exact', head: true }),
+        sb.from('programs').select('*', { count: 'exact', head: true })
+      ]);
+      const { data: depts } = await sb.from('departments').select('*');
+      return {
+        success: true,
+        data: {
+          summary: {
+            totalMembers: totalMembers || 0,
+            activeMembers: activeMembers || 0,
+            totalDepartments: totalDepts || 0,
+            totalPrograms: totalPrograms || 0,
+            upcomingPrograms: 0,
+            completedPrograms: totalPrograms || 0,
+            ongoingPrograms: 0,
+            plannedPrograms: 0,
+            totalCollected: 0,
+            totalSpent: 0,
+            currentBalance: 0,
+            totalSponsorsCount: 0,
+            totalSponsorshipSum: 0,
+            programsThisYear: totalPrograms || 0,
+            programsThisMonth: 0
+          },
+          departments: (depts || []).map(d => ({ id: d.id, name: d.name, count: 0 })),
+          recentPrograms: [],
+          monthlyPrograms: []
+        }
+      };
+    }
+  } catch (sbErr) {
+    console.warn('[Supabase Cloud Request Error]', sbErr);
+    throw sbErr;
+  }
+  return null;
+}
+
 async function request(endpoint, options = {}) {
   const token = authState.getToken();
   const headers = options.headers || {};
@@ -45,6 +342,33 @@ async function request(endpoint, options = {}) {
     headers
   };
 
+  // 1. When Supabase is configured, use Supabase as the primary cloud database
+  const isSupabaseManaged = 
+    endpoint.startsWith('/members') || 
+    endpoint.startsWith('/departments') || 
+    endpoint.startsWith('/programs') || 
+    endpoint.startsWith('/dashboard/stats');
+
+  if (isSupabaseConfigured() && isSupabaseManaged) {
+    try {
+      const sbData = await handleSupabaseRequest(endpoint, options);
+      if (sbData) {
+        // If write operation, also mirror to local backend in background if available
+        const method = (options.method || 'GET').toUpperCase();
+        if (method !== 'GET') {
+          fetch(`${API_BASE}${endpoint}`, config).catch(() => {});
+        }
+        return sbData;
+      }
+    } catch (sbErr) {
+      console.warn('[Supabase Cloud Request Failed, attempting local fallback]', sbErr);
+      if (sbErr.message && !sbErr.message.includes('fetch') && !sbErr.message.includes('network') && !sbErr.message.includes('Failed to fetch')) {
+        throw sbErr;
+      }
+    }
+  }
+
+  // 2. Fallback to Express backend or static mock
   try {
     let res;
     let isOfflineStatic = false;
@@ -59,6 +383,10 @@ async function request(endpoint, options = {}) {
     }
 
     if (isOfflineStatic) {
+      if (isSupabaseConfigured()) {
+        const sbData = await handleSupabaseRequest(endpoint, options);
+        if (sbData) return sbData;
+      }
       return getStaticMockData(endpoint, options);
     }
 
@@ -83,8 +411,12 @@ async function request(endpoint, options = {}) {
     }
     return data;
   } catch (err) {
-    // If backend failed and it's not a 401 auth error, use static demo fallback
+    // If backend failed and it's not a 401 auth error, use Supabase or static demo fallback
     if (!err.message?.includes('Invalid username')) {
+      if (isSupabaseConfigured()) {
+        const sbData = await handleSupabaseRequest(endpoint, options);
+        if (sbData) return sbData;
+      }
       return getStaticMockData(endpoint, options);
     }
     throw err;

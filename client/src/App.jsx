@@ -6,6 +6,7 @@ import TopHeader from './components/TopHeader';
 import MobileBottomNav from './components/MobileBottomNav';
 import Toast from './components/Toast';
 import ClubAnimationStudio from './components/ClubAnimationStudio';
+import HodWelcomeTransition from './components/HodWelcomeTransition';
 
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
@@ -72,6 +73,7 @@ class ErrorBoundary extends React.Component {
 
 export default function App() {
   const [showIntro, setShowIntro] = useState(false);
+  const [showHodWelcome, setShowHodWelcome] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const u = authState.getUser();
@@ -269,7 +271,7 @@ export default function App() {
           onLoginSuccess={(u) => {
             setCurrentUser(u);
             if (u.role === 'HOD' || u.username === 'HOD') {
-              showToast('success', 'Welcome back HEAD OF THE DEPARTMENT 🫡', 'Executive CSE Department Head portal initialized.');
+              setShowHodWelcome(true);
             } else {
               showToast('success', `Welcome back, ${u.full_name}!`, 'STIC management console initialized.');
             }
@@ -524,6 +526,16 @@ export default function App() {
 
       {/* Global Toast Stack */}
       <Toast toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Special HOD Presidential Salute Pop Welcome Transition */}
+      {showHodWelcome && (
+        <HodWelcomeTransition
+          onComplete={() => {
+            setShowHodWelcome(false);
+            showToast('success', 'Welcome back, Head of the Department 🫡', 'Executive CSE Department Head portal active.');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STIC Club Official Animation Studio & Exporter</title>
+  <link rel="icon" type="image/png" href="stic_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.95);
+      --border: rgba(255, 255, 255, 0.08);
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --sky: #38bdf8;
+      --orange: #f97316;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #172554 0%, #090d16 60%);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 20px;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 20px;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--sky);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .subtext {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .tab-switch {
+      background: rgba(30, 41, 59, 0.8);
+      padding: 4px;
+      border-radius: 8px;
+      display: flex;
+      gap: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #0284c7;
+      color: #fff;
+    }
+
+    .viewport-card {
+      position: relative;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      width: 100%;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .controls-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .time-label {
+      font-family: monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      min-width: 44px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .circle-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.15s;
+    }
+
+    .circle-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .circle-btn.play {
+      background: var(--primary);
+      border: none;
+    }
+
+    .circle-btn.play:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-export {
+      padding: 9px 18px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: none;
+      color: #fff;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-export:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+    }
+
+    .scene-pill {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+    }
+
+    .scene-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    /* Record Overlay */
+    .record-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.92);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+      color: #fff;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(56, 189, 248, 0.3);
+      border-top-color: var(--sky);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .progress-bar-wrap {
+      width: 300px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10b981, #38bdf8);
+      transition: width 0.1s linear;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <div class="brand-title">
+        <div class="brand-icon">✦</div>
+        <div>
+          <h1>STIC Club Official Brand Animation Studio <span class="badge">Clean Modern & Academic</span></h1>
+          <p class="subtext">Srinivasa Ramanujan Institute of Technology · Department of Computer Science & Engineering</p>
+        </div>
+      </div>
+
+      <div class="tab-switch">
+        <button id="tabRemastered" class="tab-btn active" onclick="switchTab('remastered')">✦ Remastered HD</button>
+        <button id="tabOriginal" class="tab-btn" onclick="switchTab('original')">▶ Original Clip</button>
+      </div>
+    </div>
+
+    <!-- Viewport -->
+    <div class="viewport-card" id="viewportCard">
+      <canvas id="animCanvas" width="1920" height="1080"></canvas>
+      <video id="origVideo" src="stic-animation.mp4" controls loop style="display: none;"></video>
+
+      <!-- Recording Overlay -->
+      <div class="record-overlay" id="recordOverlay">
+        <div class="spinner"></div>
+        <h3 id="recordHeading">Exporting High-Definition Animation (1080p)...</h3>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="recordProgress"></div>
+        </div>
+        <p class="subtext" id="recordSubtext">0% · Encoding 60 FPS Video File...</p>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-card" id="controlsCard">
+      <div class="timeline-row">
+        <span class="time-label" id="currentTimeLabel">0.0s</span>
+        <input type="range" id="timeSlider" min="0" max="12" step="0.05" value="0">
+        <span class="time-label" id="durationLabel">12.0s</span>
+      </div>
+
+      <div class="actions-row">
+        <div class="btn-group">
+          <button class="circle-btn play" id="playBtn" onclick="togglePlay()">❚❚</button>
+          <button class="circle-btn" onclick="restartAnim()" title="Restart">↺</button>
+          <button class="circle-btn" id="soundBtn" onclick="toggleSound()" title="Sound Toggle">🔊</button>
+          <div class="scene-pill">
+            <span class="scene-dot"></span>
+            <span id="sceneNameLabel">Scene 1: Emblem Reveal</span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn-export" onclick="exportVideo()">⬇ Export HD Video (MP4 / WebM)</button>
+          <button class="circle-btn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('animCanvas');
+    const ctx = canvas.getContext('2d');
+    const origVideo = document.getElementById('origVideo');
+    const timeSlider = document.getElementById('timeSlider');
+    const currentTimeLabel = document.getElementById('currentTimeLabel');
+    const playBtn = document.getElementById('playBtn');
+    const soundBtn = document.getElementById('soundBtn');
+    const sceneNameLabel = document.getElementById('sceneNameLabel');
+    const recordOverlay = document.getElementById('recordOverlay');
+    const recordProgress = document.getElementById('recordProgress');
+    const recordSubtext = document.getElementById('recordSubtext');
+
+    let duration = 12.0;
+    let currentTime = 0;
+    let isPlaying = true;
+    let soundEnabled = true;
+    let isRecording = false;
+    let activeTab = 'remastered';
+    let audioCtx = null;
+    let lastTime = null;
+
+    // Load Logos
+    const sticLogo = new Image();
+    sticLogo.src = 'stic_logo.png?v=2';
+
+    const sritLogo = new Image();
+    sritLogo.src = 'srit_official_logo.png?v=2';
+    sritLogo.onerror = () => { sritLogo.src = 'srit_circle_wing_ref.png?v=2'; };
+
+    // Easing functions
+    function easeOutCubic(x) { const v = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - v, 3); }
+    function easeInOutCubic(x) { const v = Math.max(0, Math.min(1, x)); return v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; }
+
+    function drawEmblemCard(img, cx, cy, boxSize, borderColor, shadowColor, isRound) {
+      ctx.save();
+      const half = boxSize / 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = 28;
+      ctx.shadowOffsetY = 10;
+      ctx.beginPath();
+      if (isRound) ctx.arc(cx, cy, half, 0, Math.PI * 2);
+      else ctx.roundRect(cx - half, cy - half, boxSize, boxSize, 28);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      if (img && img.complete && img.naturalWidth > 0) {
+        const pad = isRound ? boxSize * 0.05 : boxSize * 0.08;
+        const avail = boxSize - pad * 2;
+        const scale = Math.min(avail / img.naturalWidth, avail / img.naturalHeight);
+        const dw = img.naturalWidth * scale;
+        const dh = img.naturalHeight * scale;
+        ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+      }
+      ctx.restore();
+    }
+
+    function drawTwoToneCentered(part1, part2, centerX, y, font1, font2, color1, color2) {
+      ctx.save();
+      ctx.textBaseline = 'middle';
+      ctx.font = font1;
+      const w1 = ctx.measureText(part1).width;
+      ctx.font = font2;
+      const w2 = ctx.measureText(part2).width;
+      const startX = centerX - (w1 + w2) / 2;
+      ctx.textAlign = 'left';
+      ctx.font = font1;
+      ctx.fillStyle = color1;
+      ctx.fillText(part1, startX, y);
+      ctx.font = font2;
+      ctx.fillStyle = color2;
+      ctx.fillText(part2, startX + w1, y);
+      ctx.restore();
+    }
+
+    // Audio chime chords
+    function playChord(freqs, gainVal = 0.12, decay = 1.8) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        freqs.forEach(freq => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(gainVal, now + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + decay);
+        });
+      } catch (e) {}
+    }
+
+    function checkSoundTriggers(t) {
+      if (Math.abs(t - 0.1) < 0.04) playChord([261.63, 329.63, 392.00, 493.88], 0.15, 2.4);
+      else if (Math.abs(t - 3.0) < 0.04) playChord([349.23, 440.00, 523.25, 659.25], 0.14, 2.2);
+      else if (Math.abs(t - 6.0) < 0.04) playChord([392.00, 493.88, 587.33, 739.99], 0.15, 2.0);
+      else if (Math.abs(t - 9.0) < 0.04) playChord([523.25, 659.25, 783.99, 987.77, 1046.50], 0.16, 3.2);
+    }
+
+    // Render Clean Modern & Academic Frame
+    function drawFrame(t) {
+      const width = canvas.width;
+      const height = canvas.height;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+      bgGrad.addColorStop(0, '#ffffff');
+      bgGrad.addColorStop(0.5, '#f8fafc');
+      bgGrad.addColorStop(1, '#f1f5f9');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+      ctx.lineWidth = 1;
+      const gridSize = 54;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.fillRect(0, 0, width, 76);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 16px Inter, Segoe UI, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('SRINIVASA RAMANUJAN INSTITUTE OF TECHNOLOGY (SRIT)', 72, 46);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#059669';
+      ctx.fillText('DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING', width - 72, 46);
+      ctx.strokeStyle = 'rgba(203, 213, 225, 0.9)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(72, 74);
+      ctx.lineTo(width - 72, 74);
+      ctx.stroke();
+      ctx.restore();
+
+      if (t < 3.0) {
+        sceneNameLabel.textContent = 'Scene 1: Club Identity Reveal';
+        const ease = easeOutCubic(t / 1.0);
+        const emblemY = centerY - 95;
+        drawEmblemCard(sticLogo, centerX, emblemY, 310 * (0.85 + 0.15 * ease), 'rgba(16, 185, 129, 0.4)', 'rgba(15,23,42,0.14)', true);
+        if (t > 0.3) {
+          const textEase = easeOutCubic((t - 0.3) / 0.8);
+          const slideY = (1 - textEase) * 24;
+          ctx.save();
+          ctx.globalAlpha = textEase;
+          ctx.textAlign = 'center';
+          ctx.font = '800 40px Outfit, Segoe UI, sans-serif';
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText('CSE SUSTAINABLE TECHNOLOGY & INNOVATION CLUB', centerX, centerY + 145 + slideY);
+          ctx.font = '800 18px Inter, Segoe UI, sans-serif';
+          ctx.fillStyle = '#059669';
+          ctx.fillText('OFFICIAL STUDENT CHAPTER  •  INNOVATE  •  SUSTAIN  •  IMPACT', centerX, centerY + 195 + slideY);
+          ctx.font = '600 25px Inter, Segoe UI, sans-serif';
+          ctx.fillStyle = '#334155';
+          ctx.fillText('Empowering Computer Science students to build technology-driven solutions for a sustainable future.', centerX, centerY + 250 + slideY);
+          ctx.restore();
+        }
+      } else if (t < 6.0) {
+        sceneNameLabel.textContent = 'Scene 2: STIC & SRIT Synergy';
+        const sceneT = t - 3.0;
+        const ease = easeInOutCubic(sceneT / 1.0);
+        const sticX = centerX - 350 * ease;
+        const sritX = centerX + 350 * ease;
+        const emblemY = centerY - 75;
+        drawEmblemCard(sticLogo, sticX, emblemY, 290, 'rgba(16, 185, 129, 0.45)', 'rgba(16,185,129,0.18)', true);
+        drawEmblemCard(sritLogo, sritX, emblemY, 290, 'rgba(234, 88, 12, 0.45)', 'rgba(234,88,12,0.18)', false);
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = '800 26px Outfit, Segoe UI, sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('CSE – STIC', sticX, emblemY + 185);
+        ctx.fillText('SRIT INSTITUTION', sritX, emblemY + 185);
+        ctx.font = '700 17px Inter, Segoe UI, sans-serif';
+        ctx.fillStyle = '#059669';
+        ctx.fillText('Sustainable Technology & Innovation Club', sticX, emblemY + 214);
+        ctx.fillStyle = '#ea580c';
+        ctx.fillText('Srinivasa Ramanujan Institute of Technology', sritX, emblemY + 214);
+        ctx.font = '800 28px Outfit, Segoe UI, sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('STIC is an initiative driven by passion by the Department of CSE under the management of SRIT.', centerX, centerY + 245);
+        ctx.restore();
+      } else if (t < 9.0) {
+        sceneNameLabel.textContent = 'Scene 3: Club Vision & Objectives';
+        drawEmblemCard(sticLogo, centerX - 95, 175, 125, 'rgba(16, 185, 129, 0.4)', 'rgba(15,23,42,0.1)', true);
+        drawEmblemCard(sritLogo, centerX + 95, 175, 125, 'rgba(234, 88, 12, 0.4)', 'rgba(15,23,42,0.1)', false);
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = '800 25px Outfit, Segoe UI, sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('“To empower Computer Science students to design and develop innovative, technology-driven solutions', centerX, 340);
+        ctx.fillText('that contribute to real-world problem solving and align with the UN Sustainable Development Goals (SDGs).”', centerX, 382);
+        ctx.font = '800 22px Outfit, Segoe UI, sans-serif';
+        ctx.fillStyle = '#059669';
+        ctx.fillText('• Promote socially responsible computing   • Encourage innovation, research & entrepreneurship', centerX, 490);
+        ctx.fillStyle = '#ea580c';
+        ctx.fillText('• Apply AI, Data Analytics, IoT & Software Eng.   • Align projects with global sustainability goals', centerX, 545);
+        ctx.restore();
+      } else {
+        sceneNameLabel.textContent = 'Scene 4: Core Brand Tagline';
+        drawEmblemCard(sticLogo, centerX - 155, 235, 210, 'rgba(16, 185, 129, 0.45)', 'rgba(16,185,129,0.16)', true);
+        drawEmblemCard(sritLogo, centerX + 155, 235, 210, 'rgba(234, 88, 12, 0.45)', 'rgba(234,88,12,0.16)', false);
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = '800 27px Outfit, Segoe UI, sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('STIC is an initiative driven by passion by the Department of CSE under the management of SRIT.', centerX, 415);
+        ctx.restore();
+        drawTwoToneCentered('INNOVATE  ', 'with Purpose.', centerX, 525, '800 42px Outfit, Segoe UI, sans-serif', '700 40px Inter, Segoe UI, sans-serif', '#0f172a', '#ea580c');
+        drawTwoToneCentered('SUSTAIN  ', 'with Vision.', centerX, 625, '800 42px Outfit, Segoe UI, sans-serif', '700 40px Inter, Segoe UI, sans-serif', '#0f172a', '#059669');
+        drawTwoToneCentered('IMPACT  ', 'the Future.', centerX, 725, '800 42px Outfit, Segoe UI, sans-serif', '700 40px Inter, Segoe UI, sans-serif', '#0f172a', '#0284c7');
+      }
+    }
+
+    // Animation Loop
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const delta = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      if (isPlaying && activeTab === 'remastered' && !isRecording) {
+        currentTime += delta;
+        if (currentTime >= duration) currentTime = 0;
+        timeSlider.value = currentTime;
+        currentTimeLabel.textContent = currentTime.toFixed(1) + 's';
+        checkSoundTriggers(currentTime);
+      }
+
+      if (activeTab === 'remastered' && !isRecording) {
+        drawFrame(currentTime);
+      }
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // Controls
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      playBtn.textContent = isPlaying ? '❚❚' : '▶';
+    }
+
+    function restartAnim() {
+      currentTime = 0;
+      timeSlider.value = 0;
+      currentTimeLabel.textContent = '0.0s';
+      isPlaying = true;
+      playBtn.textContent = '❚❚';
+      checkSoundTriggers(0.1);
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+    }
+
+    timeSlider.addEventListener('input', (e) => {
+      currentTime = parseFloat(e.target.value);
+      currentTimeLabel.textContent = currentTime.toFixed(1) + 's';
+      drawFrame(currentTime);
+    });
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById('tabRemastered').classList.toggle('active', tab === 'remastered');
+      document.getElementById('tabOriginal').classList.toggle('active', tab === 'original');
+      document.getElementById('controlsCard').style.display = tab === 'remastered' ? 'flex' : 'none';
+
+      if (tab === 'remastered') {
+        canvas.style.display = 'block';
+        origVideo.style.display = 'none';
+        origVideo.pause();
+      } else {
+        canvas.style.display = 'none';
+        origVideo.style.display = 'block';
+        origVideo.play();
+      }
+    }
+
+    function toggleFullscreen() {
+      const card = document.getElementById('viewportCard');
+      if (!document.fullscreenElement) {
+        card.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Video Exporter
+    async function exportVideo() {
+      try {
+        isRecording = true;
+        isPlaying = false;
+        recordOverlay.style.display = 'flex';
+        currentTime = 0;
+
+        const stream = canvas.captureStream(60);
+        let mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+
+        const chunks = [];
+        const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6000000 });
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'STIC_Club_Brand_Animation_HD.webm';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            recordOverlay.style.display = 'none';
+            isRecording = false;
+            isPlaying = true;
+          }, 200);
+        };
+
+        recorder.start();
+
+        const totalFrames = duration * 60;
+        let f = 0;
+        function step() {
+          if (f <= totalFrames) {
+            const t = (f / totalFrames) * duration;
+            const pct = Math.round((f / totalFrames) * 100);
+            recordProgress.style.width = pct + '%';
+            recordSubtext.textContent = pct + '% · Encoding Frame ' + f + ' of ' + totalFrames;
+            drawFrame(t);
+            f++;
+            setTimeout(step, 1000 / 60);
+          } else {
+            recorder.stop();
+          }
+        }
+        step();
+      } catch (err) {
+        alert('Export error: ' + err.message);
+        recordOverlay.style.display = 'none';
+        isRecording = false;
+      }
+    }
+  </script>
+</body>
+</html>

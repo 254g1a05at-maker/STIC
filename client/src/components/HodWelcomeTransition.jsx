@@ -1,24 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 
 export default function HodWelcomeTransition({ onComplete }) {
   const [isExiting, setIsExiting] = useState(false);
+  const autoExitRef = useRef(null);
+  const exitTimeoutRef = useRef(null);
+
+  const handleExit = useCallback(() => {
+    if (isExiting) return;
+    setIsExiting(true);
+    if (autoExitRef.current) clearTimeout(autoExitRef.current);
+    exitTimeoutRef.current = setTimeout(() => {
+      if (onComplete) onComplete();
+    }, 600);
+  }, [isExiting, onComplete]);
 
   useEffect(() => {
-    // Play for 3.4 seconds, then start smooth exit transition
-    const exitTimer = setTimeout(() => {
+    autoExitRef.current = setTimeout(() => {
       handleExit();
     }, 3200);
 
-    return () => clearTimeout(exitTimer);
-  }, []);
-
-  const handleExit = () => {
-    if (isExiting) return;
-    setIsExiting(true);
-    setTimeout(() => {
-      if (onComplete) onComplete();
-    }, 700); // Allow exit fade transition to complete
-  };
+    return () => {
+      if (autoExitRef.current) clearTimeout(autoExitRef.current);
+      if (exitTimeoutRef.current) clearTimeout(exitTimeoutRef.current);
+    };
+  }, [handleExit]);
 
   const titleText = "Welcome back, Head of the Department";
   const subtitleText = "Privilege to have you";
@@ -39,32 +44,29 @@ export default function HodWelcomeTransition({ onComplete }) {
         overflow: 'hidden',
         userSelect: 'none',
         opacity: isExiting ? 0 : 1,
-        transform: isExiting ? 'scale(1.05)' : 'scale(1)',
-        filter: isExiting ? 'blur(8px)' : 'none',
-        transition: 'opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.7s ease',
+        transform: isExiting ? 'scale(1.03)' : 'scale(1)',
+        transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
         boxSizing: 'border-box',
-        padding: '24px'
+        padding: '24px',
+        willChange: 'opacity, transform'
       }}
     >
       <style>{`
         @keyframes hodSalutePop {
           0% {
-            transform: scale(0) rotate(-20deg);
+            transform: scale(0) rotate(-16deg);
             opacity: 0;
-            filter: drop-shadow(0 0 0 rgba(234, 179, 8, 0));
           }
           50% {
-            transform: scale(1.22) rotate(6deg);
+            transform: scale(1.18) rotate(4deg);
             opacity: 1;
-            filter: drop-shadow(0 16px 36px rgba(234, 179, 8, 0.45));
           }
           75% {
-            transform: scale(0.92) rotate(-3deg);
+            transform: scale(0.95) rotate(-2deg);
           }
           100% {
             transform: scale(1) rotate(0deg);
             opacity: 1;
-            filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.08));
           }
         }
 
@@ -73,38 +75,35 @@ export default function HodWelcomeTransition({ onComplete }) {
             transform: translateY(0px) rotate(0deg);
           }
           50% {
-            transform: translateY(-8px) rotate(1.5deg);
+            transform: translateY(-6px) rotate(1deg);
           }
         }
 
         @keyframes hodLetterPop {
           0% {
-            transform: translateY(32px) scale(0.2);
+            transform: translateY(24px) scale(0.4);
             opacity: 0;
-            filter: blur(4px);
           }
           65% {
-            transform: translateY(-6px) scale(1.18);
+            transform: translateY(-4px) scale(1.12);
             opacity: 1;
-            filter: blur(0px);
           }
           85% {
-            transform: translateY(2px) scale(0.95);
+            transform: translateY(1px) scale(0.97);
           }
           100% {
             transform: translateY(0) scale(1);
             opacity: 1;
-            filter: blur(0px);
           }
         }
 
         @keyframes hodSubLetterPop {
           0% {
-            transform: translateY(24px) scale(0.4);
+            transform: translateY(18px) scale(0.5);
             opacity: 0;
           }
           70% {
-            transform: translateY(-4px) scale(1.12);
+            transform: translateY(-3px) scale(1.08);
             opacity: 1;
           }
           100% {
@@ -113,13 +112,8 @@ export default function HodWelcomeTransition({ onComplete }) {
           }
         }
 
-        @keyframes hodRaysSpin {
-          0% { transform: translate(-50%, -50%) rotate(0deg); }
-          100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
         @keyframes hodBadgeIn {
-          0% { opacity: 0; transform: scale(0.7); }
+          0% { opacity: 0; transform: scale(0.8); }
           100% { opacity: 1; transform: scale(1); }
         }
 

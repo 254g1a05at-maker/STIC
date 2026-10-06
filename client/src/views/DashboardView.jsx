@@ -891,11 +891,19 @@ export default function DashboardView({
                   </span>
                 </div>
 
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ color: 'var(--text-subtle)' }}>Lead:</span>
-                  <span style={{ color: dept.lead_name ? 'var(--primary-light)' : 'var(--text-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {dept.lead_name || 'Unassigned'}
-                  </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Lead:</span>
+                    <span style={{ color: dept.lead_name ? 'var(--primary-light)' : 'var(--text-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {dept.lead_name || 'Unassigned'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Co-Lead:</span>
+                    <span style={{ color: dept.co_lead_name ? '#38bdf8' : 'var(--text-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {dept.co_lead_name || 'Unassigned'}
+                    </span>
+                  </div>
                 </div>
 
                 <p style={{ fontSize: '0.74rem', color: 'var(--text-subtle)', lineHeight: 1.45, margin: '4px 0 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

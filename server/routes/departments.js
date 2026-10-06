@@ -4,7 +4,7 @@ const { db } = require('../db');
 const { requireAuth } = require('../auth');
 const { logActivity } = require('../activity');
 
-// GET /api/departments (all departments with lead details & member count)
+// GET /api/departments (all departments with lead & co-lead details & member count)
 router.get('/', requireAuth, (req, res) => {
   try {
     const departments = db.prepare(`
@@ -15,9 +15,15 @@ router.get('/', requireAuth, (req, res) => {
         m.phone as lead_phone,
         m.profile_photo as lead_photo,
         m.college_id as lead_college_id,
-        (SELECT COUNT(*) FROM club_members cm WHERE cm.department_id = d.id) as member_count
+        cm.full_name as co_lead_name,
+        cm.email as co_lead_email,
+        cm.phone as co_lead_phone,
+        cm.profile_photo as co_lead_photo,
+        cm.college_id as co_lead_college_id,
+        (SELECT COUNT(*) FROM club_members mem WHERE mem.department_id = d.id) as member_count
       FROM departments d
       LEFT JOIN club_members m ON d.lead_member_id = m.id
+      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
       ORDER BY d.id ASC
     `).all();
 
@@ -28,7 +34,7 @@ router.get('/', requireAuth, (req, res) => {
   }
 });
 
-// GET /api/departments/:id (single department with all its members)
+// GET /api/departments/:id (single department with lead, co-lead & all its members)
 router.get('/:id', requireAuth, (req, res) => {
   try {
     const deptId = Number(req.params.id);
@@ -39,9 +45,15 @@ router.get('/:id', requireAuth, (req, res) => {
         m.email as lead_email,
         m.phone as lead_phone,
         m.profile_photo as lead_photo,
-        m.college_id as lead_college_id
+        m.college_id as lead_college_id,
+        cm.full_name as co_lead_name,
+        cm.email as co_lead_email,
+        cm.phone as co_lead_phone,
+        cm.profile_photo as co_lead_photo,
+        cm.college_id as co_lead_college_id
       FROM departments d
       LEFT JOIN club_members m ON d.lead_member_id = m.id
+      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
       WHERE d.id = ?
     `).get(deptId);
 
@@ -69,7 +81,78 @@ router.get('/:id', requireAuth, (req, res) => {
   }
 });
 
-// PUT /api/departments/:id (update name, description, lead)
+// POST /api/departments (create new department)
+router.post('/', requireAuth, (req, res) => {
+  try {
+    const { name, description, lead_member_id, co_lead_member_id, icon } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Department name is required.' });
+    }
+
+    const trimmedName = name.trim();
+    const existing = db.prepare('SELECT id FROM departments WHERE name = ?').get(trimmedName);
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'A department with this name already exists.' });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO departments (name, description, lead_member_id, co_lead_member_id, icon, is_demo)
+      VALUES (?, ?, ?, ?, ?, 0)
+    `).run(
+      trimmedName,
+      description || null,
+      lead_member_id ? Number(lead_member_id) : null,
+      co_lead_member_id ? Number(co_lead_member_id) : null,
+      icon || 'Lightbulb'
+    );
+
+    const deptId = result.lastInsertRowid;
+    if (lead_member_id) {
+      db.prepare('UPDATE club_members SET department_id = ? WHERE id = ?').run(deptId, Number(lead_member_id));
+    }
+    if (co_lead_member_id) {
+      db.prepare('UPDATE club_members SET department_id = ? WHERE id = ?').run(deptId, Number(co_lead_member_id));
+    }
+
+    const created = db.prepare(`
+      SELECT 
+        d.*,
+        m.full_name as lead_name,
+        m.email as lead_email,
+        m.phone as lead_phone,
+        m.profile_photo as lead_photo,
+        m.college_id as lead_college_id,
+        cm.full_name as co_lead_name,
+        cm.email as co_lead_email,
+        cm.phone as co_lead_phone,
+        cm.profile_photo as co_lead_photo,
+        cm.college_id as co_lead_college_id,
+        (SELECT COUNT(*) FROM club_members mem WHERE mem.department_id = d.id) as member_count
+      FROM departments d
+      LEFT JOIN club_members m ON d.lead_member_id = m.id
+      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
+      WHERE d.id = ?
+    `).get(deptId);
+
+    logActivity(req, {
+      department: 'Departments & Teams',
+      action: 'Created',
+      change: `Created new department "${created.name}"`,
+      new_value: created
+    });
+
+    return res.json({
+      success: true,
+      message: 'Department created successfully.',
+      data: created
+    });
+  } catch (err) {
+    console.error('[DEPARTMENT CREATE ERROR]', err);
+    return res.status(500).json({ success: false, message: err.message || 'Failed to create department.' });
+  }
+});
+
+// PUT /api/departments/:id (update name, description, lead, co-lead, icon)
 router.put('/:id', requireAuth, (req, res) => {
   try {
     const deptId = Number(req.params.id);
@@ -78,17 +161,34 @@ router.put('/:id', requireAuth, (req, res) => {
       return res.status(404).json({ success: false, message: 'Department not found.' });
     }
 
-    const { name, description, lead_member_id, icon } = req.body;
+    const { name, description, lead_member_id, co_lead_member_id, icon } = req.body;
 
-    let leadId = null;
-    if (lead_member_id !== undefined && lead_member_id !== null && lead_member_id !== '') {
-      leadId = Number(lead_member_id);
-      const leadMember = db.prepare('SELECT id FROM club_members WHERE id = ?').get(leadId);
-      if (!leadMember) {
-        return res.status(400).json({ success: false, message: 'Selected lead member does not exist.' });
+    let leadId = existing.lead_member_id;
+    if (lead_member_id !== undefined) {
+      if (lead_member_id !== null && lead_member_id !== '') {
+        leadId = Number(lead_member_id);
+        const leadMember = db.prepare('SELECT id FROM club_members WHERE id = ?').get(leadId);
+        if (!leadMember) {
+          return res.status(400).json({ success: false, message: 'Selected lead member does not exist.' });
+        }
+        db.prepare('UPDATE club_members SET department_id = ? WHERE id = ?').run(deptId, leadId);
+      } else {
+        leadId = null;
       }
-      // Automatically ensure lead member is in this department if they aren't already
-      db.prepare('UPDATE club_members SET department_id = ? WHERE id = ?').run(deptId, leadId);
+    }
+
+    let coLeadId = existing.co_lead_member_id;
+    if (co_lead_member_id !== undefined) {
+      if (co_lead_member_id !== null && co_lead_member_id !== '') {
+        coLeadId = Number(co_lead_member_id);
+        const coLeadMember = db.prepare('SELECT id FROM club_members WHERE id = ?').get(coLeadId);
+        if (!coLeadMember) {
+          return res.status(400).json({ success: false, message: 'Selected co-lead member does not exist.' });
+        }
+        db.prepare('UPDATE club_members SET department_id = ? WHERE id = ?').run(deptId, coLeadId);
+      } else {
+        coLeadId = null;
+      }
     }
 
     db.prepare(`
@@ -96,6 +196,7 @@ router.put('/:id', requireAuth, (req, res) => {
         name = COALESCE(?, name),
         description = COALESCE(?, description),
         lead_member_id = ?,
+        co_lead_member_id = ?,
         icon = COALESCE(?, icon),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -103,6 +204,7 @@ router.put('/:id', requireAuth, (req, res) => {
       name ? name.trim() : null,
       description !== undefined ? description : null,
       leadId,
+      coLeadId,
       icon || null,
       deptId
     );
@@ -114,16 +216,23 @@ router.put('/:id', requireAuth, (req, res) => {
         m.email as lead_email,
         m.phone as lead_phone,
         m.profile_photo as lead_photo,
-        (SELECT COUNT(*) FROM club_members cm WHERE cm.department_id = d.id) as member_count
+        m.college_id as lead_college_id,
+        cm.full_name as co_lead_name,
+        cm.email as co_lead_email,
+        cm.phone as co_lead_phone,
+        cm.profile_photo as co_lead_photo,
+        cm.college_id as co_lead_college_id,
+        (SELECT COUNT(*) FROM club_members mem WHERE mem.department_id = d.id) as member_count
       FROM departments d
       LEFT JOIN club_members m ON d.lead_member_id = m.id
+      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
       WHERE d.id = ?
     `).get(deptId);
 
     logActivity(req, {
       department: 'Departments & Teams',
       action: 'Updated',
-      change: `Updated department "${updated.name}" details`,
+      change: `Updated department "${updated.name}" details (Lead & Co-Lead)`,
       previous_value: existing,
       new_value: updated
     });
@@ -186,6 +295,9 @@ router.delete('/:id/members/:memberId', requireAuth, (req, res) => {
 
     // If this member was the department lead, unset lead
     db.prepare('UPDATE departments SET lead_member_id = NULL WHERE id = ? AND lead_member_id = ?').run(deptId, memberId);
+
+    // If this member was the department co-lead, unset co-lead
+    db.prepare('UPDATE departments SET co_lead_member_id = NULL WHERE id = ? AND co_lead_member_id = ?').run(deptId, memberId);
 
     // Unassign department
     db.prepare('UPDATE club_members SET department_id = NULL WHERE id = ?').run(memberId);

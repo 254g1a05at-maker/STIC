@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS departments (
   name TEXT UNIQUE NOT NULL,
   description TEXT,
   lead_member_id BIGINT,
+  co_lead_member_id BIGINT,
   icon TEXT,
   is_demo INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -172,10 +173,13 @@ INSERT INTO departments (id, name, description, icon)
 VALUES (3, 'Social Media & Publicity', 'Builds brand presence, runs Instagram, YouTube, and LinkedIn campaigns, and designs promotional graphics.', 'Share2')
 ON CONFLICT (name) DO NOTHING;
 INSERT INTO departments (id, name, description, icon)
-VALUES (4, 'Technical & Innovation', 'Builds IoT, AI, solar, circular-waste hardware prototypes, and powers club software infrastructure.', 'Cpu')
+VALUES (4, 'Technical & Infrastructure', 'Builds club software infrastructure, systems, web tools, coding bootcamps, and technical architectures.', 'Cpu')
 ON CONFLICT (name) DO NOTHING;
 INSERT INTO departments (id, name, description, icon)
 VALUES (5, 'Event Coordinators', 'Leads end-to-end logistics, campus outreach, stage management, volunteer delegation, and venue setup.', 'CalendarCheck')
+ON CONFLICT (name) DO NOTHING;
+INSERT INTO departments (id, name, description, icon)
+VALUES (6, 'Project & Innovation', 'Drives cutting-edge student projects, green engineering prototypes, patent applications, research papers, and technical innovation challenges.', 'Lightbulb')
 ON CONFLICT (name) DO NOTHING;
 
 -- =========================================================

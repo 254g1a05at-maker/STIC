@@ -80,6 +80,7 @@ function formatISTTime(entry) {
 function formatDepartment(dept) {
   if (!dept) return 'General';
   const d = dept.trim();
+  if (d === 'Project & Innovation' || d === 'Project and Innovation') return 'Project & Innovation';
   if (d === 'Finance & Accounts') return 'Finance';
   if (d === 'Programs & Events') return 'Programs';
   if (d === 'Website & Announcements') return 'Website';
@@ -565,6 +566,7 @@ export default function ActivityLogView({ showToast }) {
               }}
             >
               <option value="all">All Departments</option>
+              <option value="Project & Innovation">Project & Innovation</option>
               <option value="Finance & Accounts">Finance</option>
               <option value="Club Members">Club Members</option>
               <option value="Programs & Events">Programs</option>

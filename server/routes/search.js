@@ -31,9 +31,9 @@ router.get('/', requireAuth, (req, res) => {
       SELECT m.id, m.full_name, m.college_id, m.email, m.position, m.year, m.branch, d.name as department_name
       FROM club_members m
       LEFT JOIN departments d ON m.department_id = d.id
-      WHERE m.full_name LIKE ? OR m.college_id LIKE ? OR m.email LIKE ? OR m.phone LIKE ? OR m.position LIKE ?
+      WHERE m.full_name LIKE ? OR m.college_id LIKE ? OR m.email LIKE ? OR m.phone LIKE ? OR m.position LIKE ? OR d.name LIKE ?
       LIMIT 10
-    `).all(term, term, term, term, term);
+    `).all(term, term, term, term, term, term);
 
     // 2. Programs
     const programs = db.prepare(`

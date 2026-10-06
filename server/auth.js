@@ -109,6 +109,17 @@ const OFFICIAL_ROLES = [
     description: 'Working Committee Lead – Tech Infrastructure, Systems & Digital Solutions'
   },
   {
+    role: 'Technical Co-Lead',
+    username: 'Technical Co-Lead',
+    full_name: 'Technical & Infrastructure Co-Lead',
+    email: 'tech.colead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    isCoLead: true,
+    description: 'Working Committee Co-Lead – Supporting Technical & Infrastructure Operations'
+  },
+  {
     role: 'Finance Lead',
     username: 'Finance Lead',
     full_name: 'Finance & Accounts Lead',
@@ -117,6 +128,81 @@ const OFFICIAL_ROLES = [
     isRepresentative: false,
     isLead: true,
     description: 'Working Committee Lead – Exclusive Management of Accounts, Incomes & Expenditures'
+  },
+  {
+    role: 'Finance Co-Lead',
+    username: 'Finance Co-Lead',
+    full_name: 'Finance & Accounts Co-Lead',
+    email: 'finance.colead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    isCoLead: true,
+    description: 'Working Committee Co-Lead – Assisting in Budgets, Accounts & Sponsorship Ledgers'
+  },
+  {
+    role: 'Content & Documentation Co-Lead',
+    username: 'Content & Documentation Co-Lead',
+    full_name: 'Content & Documentation Co-Lead',
+    email: 'content.colead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    isCoLead: true,
+    description: 'Working Committee Co-Lead – Assisting in Reports, Documentation & Newsletters'
+  },
+  {
+    role: 'Social Media Co-Lead',
+    username: 'Social Media Co-Lead',
+    full_name: 'Social Media & Outreach Co-Lead',
+    email: 'social.colead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    isCoLead: true,
+    description: 'Working Committee Co-Lead – Assisting in Digital Campaigns & Media Archives'
+  },
+  {
+    role: 'Event Management Lead',
+    username: 'Event Management Lead',
+    full_name: 'Event Management & Logistics Lead',
+    email: 'event.lead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    description: 'Working Committee Lead – Campus Outreach, Stage Setup & Event Logistics'
+  },
+  {
+    role: 'Event Management Co-Lead',
+    username: 'Event Management Co-Lead',
+    full_name: 'Event Management & Logistics Co-Lead',
+    email: 'event.colead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    isCoLead: true,
+    description: 'Working Committee Co-Lead – Supporting Venue Management, Registrations & Logistics'
+  },
+  {
+    role: 'Project and Innovation Lead',
+    username: 'Project and Innovation Lead',
+    full_name: 'Project & Innovation Lead',
+    email: 'project.lead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    description: 'Working Committee Lead – Student Projects, Hardware/Software Prototypes & Patent Innovations'
+  },
+  {
+    role: 'Project and Innovation Co-Lead',
+    username: 'Project and Innovation Co-Lead',
+    full_name: 'Project & Innovation Co-Lead',
+    email: 'project.colead@stic-club.org',
+    defaultPassword: 'stic@1234',
+    isRepresentative: false,
+    isLead: true,
+    isCoLead: true,
+    description: 'Working Committee Co-Lead – Assisting in Project Incubation, Prototype Building & Hackathons'
   }
 ];
 
@@ -261,17 +347,35 @@ function comparePassword(plainPassword, hash) {
 
 // Fetch active permissions for a given role from the database
 function getRolePermissions(role, db) {
-  // 1. Roles restricted from Finance section:
-  // Content and Documentation Lead, Social Media Lead, Technical Lead
-  const isFinanceRestrictedLead =
-    role === 'Content and Documentation Lead' ||
-    role === 'Social Media Lead' ||
-    role === 'Technical Lead';
+  const normRole = (role || '').trim();
 
-  if (isFinanceRestrictedLead) {
+  // 1. Finance Lead & Co-Lead: Open finance access
+  if (normRole === 'Finance Lead' || normRole === 'Finance Co-Lead' || normRole === 'Finance & Accounts Lead' || normRole === 'Finance & Accounts Co-Lead') {
     const perms = {};
     PERMISSION_DEFINITIONS.forEach(p => {
-      // manage_finance is strictly forbidden
+      perms[p.key] = true;
+    });
+    return {
+      ...perms,
+      can_access_finance: true,
+      is_representative: false,
+      is_finance_lead: true,
+      is_lead: true,
+      is_website_handler: false
+    };
+  }
+
+  // 2. Other Department Committee Leads & Co-Leads: Access all except finance
+  const isDepartmentLeadOrCoLead =
+    normRole.endsWith('Lead') ||
+    normRole.endsWith('Co-Lead') ||
+    normRole.includes('Lead') ||
+    normRole.includes('Co-Lead');
+
+  if (isDepartmentLeadOrCoLead) {
+    const perms = {};
+    PERMISSION_DEFINITIONS.forEach(p => {
+      // manage_finance is strictly forbidden for non-finance leads
       if (p.key === 'manage_finance') {
         perms[p.key] = false;
       } else {
@@ -282,22 +386,6 @@ function getRolePermissions(role, db) {
       ...perms,
       can_access_finance: false,
       is_representative: false,
-      is_lead: true,
-      is_website_handler: false
-    };
-  }
-
-  // 2. Finance Lead: Open finance access
-  if (role === 'Finance Lead') {
-    const perms = {};
-    PERMISSION_DEFINITIONS.forEach(p => {
-      perms[p.key] = true;
-    });
-    return {
-      ...perms,
-      can_access_finance: true,
-      is_representative: false,
-      is_finance_lead: true,
       is_lead: true,
       is_website_handler: false
     };

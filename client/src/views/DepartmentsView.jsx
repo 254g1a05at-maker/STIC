@@ -14,13 +14,16 @@ import {
   Share2,
   Cpu,
   CalendarCheck,
+  Lightbulb,
   X,
   Plus,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { api } from '../api';
 
-export default function DepartmentsView({ showToast }) {
+export default function DepartmentsView({ showToast, onRefreshStats }) {
   const [departments, setDepartments] = useState([]);
   const [allMembers, setAllMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,12 +33,16 @@ export default function DepartmentsView({ showToast }) {
   const [isEditDeptOpen, setIsEditDeptOpen] = useState(false);
   const [isAssignMemberOpen, setIsAssignMemberOpen] = useState(false);
   const [isChangeLeadOpen, setIsChangeLeadOpen] = useState(false);
+  const [isChangeCoLeadOpen, setIsChangeCoLeadOpen] = useState(false);
+  const [isCreateDeptOpen, setIsCreateDeptOpen] = useState(false);
   const [activeDept, setActiveDept] = useState(null);
 
   // Form states
-  const [deptForm, setDeptForm] = useState({ name: '', description: '', lead_member_id: '' });
+  const [deptForm, setDeptForm] = useState({ name: '', description: '', lead_member_id: '', co_lead_member_id: '', icon: '' });
+  const [newDeptForm, setNewDeptForm] = useState({ name: '', description: '', lead_member_id: '', co_lead_member_id: '', icon: 'Lightbulb' });
   const [assignMemberId, setAssignMemberId] = useState('');
   const [newLeadId, setNewLeadId] = useState('');
+  const [newCoLeadId, setNewCoLeadId] = useState('');
 
   useEffect(() => {
     loadData();
@@ -50,6 +57,7 @@ export default function DepartmentsView({ showToast }) {
       ]);
       setDepartments(deptRes.data || []);
       setAllMembers(memRes.data || []);
+      if (onRefreshStats) onRefreshStats();
     } catch (err) {
       showToast('error', 'Failed to load department data', err.message);
     } finally {
@@ -58,11 +66,13 @@ export default function DepartmentsView({ showToast }) {
   };
 
   const getDeptIcon = (name) => {
-    if (name.includes('Content') || name.includes('Documentation')) return FileText;
-    if (name.includes('Finance') || name.includes('Sponsorship')) return IndianRupee;
-    if (name.includes('Social') || name.includes('Publicity')) return Share2;
-    if (name.includes('Technical') || name.includes('Innovation')) return Cpu;
-    if (name.includes('Event') || name.includes('Coordinator')) return CalendarCheck;
+    const n = (name || '').toLowerCase();
+    if (n.includes('project') || n.includes('innovation')) return Lightbulb;
+    if (n.includes('content') || n.includes('documentation')) return FileText;
+    if (n.includes('finance') || n.includes('sponsorship')) return IndianRupee;
+    if (n.includes('social') || n.includes('publicity')) return Share2;
+    if (n.includes('technical') || n.includes('infrastructure')) return Cpu;
+    if (n.includes('event') || n.includes('coordinator')) return CalendarCheck;
     return Building2;
   };
 
@@ -80,7 +90,9 @@ export default function DepartmentsView({ showToast }) {
     setDeptForm({
       name: dept.name,
       description: dept.description || '',
-      lead_member_id: dept.lead_member_id || ''
+      lead_member_id: dept.lead_member_id || '',
+      co_lead_member_id: dept.co_lead_member_id || '',
+      icon: dept.icon || ''
     });
     setIsEditDeptOpen(true);
   };
@@ -97,6 +109,19 @@ export default function DepartmentsView({ showToast }) {
       }
     } catch (err) {
       showToast('error', 'Update Failed', err.message);
+    }
+  };
+
+  const handleCreateDeptSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createDepartment(newDeptForm);
+      showToast('success', 'Department Created', `New department ${newDeptForm.name} created successfully.`);
+      setIsCreateDeptOpen(false);
+      setNewDeptForm({ name: '', description: '', lead_member_id: '', co_lead_member_id: '', icon: 'Lightbulb' });
+      loadData();
+    } catch (err) {
+      showToast('error', 'Creation Failed', err.message);
     }
   };
 
@@ -149,7 +174,7 @@ export default function DepartmentsView({ showToast }) {
     e.preventDefault();
     try {
       await api.updateDepartment(activeDept.id, { lead_member_id: newLeadId });
-      showToast('success', 'Lead Assigned', `Department lead for ${activeDept.name} updated.`);
+      showToast('success', 'Lead Assigned', `Department Lead for ${activeDept.name} updated.`);
       setIsChangeLeadOpen(false);
       loadData();
       if (selectedDeptDetail && selectedDeptDetail.id === activeDept.id) {
@@ -160,6 +185,27 @@ export default function DepartmentsView({ showToast }) {
     }
   };
 
+  const openChangeCoLeadModal = (dept) => {
+    setActiveDept(dept);
+    setNewCoLeadId(dept.co_lead_member_id || '');
+    setIsChangeCoLeadOpen(true);
+  };
+
+  const handleChangeCoLeadSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.updateDepartment(activeDept.id, { co_lead_member_id: newCoLeadId });
+      showToast('success', 'Co-Lead Assigned', `Department Co-Lead for ${activeDept.name} updated.`);
+      setIsChangeCoLeadOpen(false);
+      loadData();
+      if (selectedDeptDetail && selectedDeptDetail.id === activeDept.id) {
+        openDepartmentDetails(activeDept);
+      }
+    } catch (err) {
+      showToast('error', 'Co-Lead Update Failed', err.message);
+    }
+  };
+
   return (
     <div className="page-container">
       {/* Header */}
@@ -167,43 +213,55 @@ export default function DepartmentsView({ showToast }) {
         <div className="page-title-wrap">
           <h1>
             <Building2 size={26} color="var(--primary-light)" />
-            STIC Departments & Team Structure
+            STIC Departments &amp; Leadership Structure
           </h1>
           <p>
-            The 5 foundational collegiate divisions driving sustainable innovation, operations, and leadership
+            The foundational collegiate wings driving sustainable innovation, projects, operations, and club leadership with appointed Leads and Co-Leads
           </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn btn-primary btn-sm" onClick={() => setIsCreateDeptOpen(true)}>
+            <Plus size={15} /> Add Department
+          </button>
         </div>
       </div>
 
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
           <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid var(--border-subtle)', borderTopColor: 'var(--primary-light)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-          <p style={{ marginTop: '12px' }}>Loading departments...</p>
+          <p style={{ marginTop: '12px' }}>Loading departments and leadership roster...</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {departments.map((dept, idx) => {
+          {departments.map((dept) => {
             const Icon = getDeptIcon(dept.name);
 
             return (
               <div key={dept.id} className="stic-card" style={{ marginBottom: 0 }}>
+                {/* Department Header Bar */}
                 <div className="card-header-bar" style={{ background: 'var(--bg-surface-elevated)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--primary-soft)', color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--primary-soft)', color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Icon size={22} />
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <h3 style={{ fontSize: '1.2rem' }}>{dept.name}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{dept.name}</h3>
                         <span className="badge badge-info">{dept.member_count} Members</span>
+                        {dept.name.toLowerCase().includes('innovation') && (
+                          <span className="badge badge-success" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                            <Sparkles size={11} /> Projects &amp; Patents
+                          </span>
+                        )}
                       </div>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', marginTop: '2px' }}>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-subtle)', marginTop: '3px', margin: 0, lineHeight: 1.4 }}>
                         {dept.description}
                       </p>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button className="btn btn-secondary btn-sm" onClick={() => openEditDept(dept)}>
                       <Edit2 size={14} /> Edit Dept
                     </button>
@@ -213,26 +271,57 @@ export default function DepartmentsView({ showToast }) {
                   </div>
                 </div>
 
+                {/* Department Leadership & Action Cards */}
                 <div className="card-body">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px', alignItems: 'center' }}>
-                    {/* Lead Card */}
-                    <div style={{ background: 'var(--bg-app)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '64px', height: '64px', minWidth: '64px', minHeight: '64px', aspectRatio: '1 / 1', borderRadius: '50%', background: 'var(--bg-surface-elevated)', border: '2.5px solid var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.3rem', color: 'var(--primary-light)', overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 14px rgba(16, 185, 129, 0.2)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    {/* 1. Department Lead Card */}
+                    <div style={{
+                      background: 'var(--bg-app)',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          minWidth: '60px',
+                          minHeight: '60px',
+                          aspectRatio: '1 / 1',
+                          borderRadius: '50%',
+                          background: 'var(--bg-surface-elevated)',
+                          border: '2.5px solid var(--primary-light)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '1.2rem',
+                          color: 'var(--primary-light)',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          boxShadow: '0 4px 14px rgba(16, 185, 129, 0.2)'
+                        }}>
                           {dept.lead_photo ? (
                             <img src={dept.lead_photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                           ) : (dept.lead_name ? dept.lead_name.charAt(0) : '?')}
                         </div>
-                        <div>
-                          <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-subtle)', fontWeight: 700 }}>
-                            Department Lead
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--primary-light)', fontWeight: 800, letterSpacing: '0.04em' }}>
+                              Department Lead
+                            </span>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dept.lead_name ? 'var(--primary-light)' : 'var(--text-subtle)' }} />
                           </div>
-                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: dept.lead_name ? 'var(--text-main)' : 'var(--text-subtle)' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: dept.lead_name ? 'var(--text-main)' : 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {dept.lead_name || 'No Lead Appointed'}
                           </div>
-                          {dept.lead_email && (
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{dept.lead_email}</div>
-                          )}
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {dept.lead_email || (dept.lead_college_id ? `ID: ${dept.lead_college_id}` : 'Vacant position')}
+                          </div>
                         </div>
                       </div>
 
@@ -240,17 +329,79 @@ export default function DepartmentsView({ showToast }) {
                         className="btn btn-outline btn-sm"
                         onClick={() => openChangeLeadModal(dept)}
                         title="Change Department Lead"
+                        style={{ flexShrink: 0, fontSize: '0.76rem', padding: '6px 10px' }}
                       >
-                        <UserCheck size={14} /> Change Lead
+                        <UserCheck size={13} /> {dept.lead_name ? 'Change Lead' : 'Assign Lead'}
                       </button>
                     </div>
 
-                    {/* Quick Member Actions */}
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => openAssignModal(dept)}>
-                        <UserPlus size={15} /> + Add Member from Club
+                    {/* 2. Department Co-Lead Card */}
+                    <div style={{
+                      background: 'var(--bg-app)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          minWidth: '60px',
+                          minHeight: '60px',
+                          aspectRatio: '1 / 1',
+                          borderRadius: '50%',
+                          background: 'var(--bg-surface-elevated)',
+                          border: '2.5px solid #38bdf8',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '1.2rem',
+                          color: '#38bdf8',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          boxShadow: '0 4px 14px rgba(56, 189, 248, 0.2)'
+                        }}>
+                          {dept.co_lead_photo ? (
+                            <img src={dept.co_lead_photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (dept.co_lead_name ? dept.co_lead_name.charAt(0) : '?')}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#38bdf8', fontWeight: 800, letterSpacing: '0.04em' }}>
+                              Department Co-Lead
+                            </span>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dept.co_lead_name ? '#38bdf8' : 'var(--text-subtle)' }} />
+                          </div>
+                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: dept.co_lead_name ? 'var(--text-main)' : 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {dept.co_lead_name || 'No Co-Lead Appointed'}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {dept.co_lead_email || (dept.co_lead_college_id ? `ID: ${dept.co_lead_college_id}` : 'Supports department lead')}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => openChangeCoLeadModal(dept)}
+                        title="Change Department Co-Lead"
+                        style={{ flexShrink: 0, fontSize: '0.76rem', padding: '6px 10px', borderColor: 'rgba(56, 189, 248, 0.35)', color: '#38bdf8' }}
+                      >
+                        <UserCheck size={13} /> {dept.co_lead_name ? 'Change Co-Lead' : 'Assign Co-Lead'}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Quick Member Add Row */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
+                    <button className="btn btn-secondary btn-sm" onClick={() => openAssignModal(dept)}>
+                      <UserPlus size={14} /> + Add Member to {dept.name}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -259,7 +410,9 @@ export default function DepartmentsView({ showToast }) {
         </div>
       )}
 
-      {/* Department Full Members List Modal */}
+      {/* =========================================================
+          MODAL: DEPARTMENT FULL MEMBERS LIST
+          ========================================================= */}
       {selectedDeptDetail && (
         <div className="modal-overlay">
           <div className="modal-card modal-lg">
@@ -267,9 +420,9 @@ export default function DepartmentsView({ showToast }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Building2 size={22} color="var(--primary-light)" />
                 <div>
-                  <h3>{selectedDeptDetail.name}</h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
-                    {selectedDeptDetail.member_count} enrolled members · Lead: {selectedDeptDetail.lead_name || 'Unassigned'}
+                  <h3 style={{ margin: 0 }}>{selectedDeptDetail.name}</h3>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', margin: 0 }}>
+                    {selectedDeptDetail.member_count} enrolled members · Lead: {selectedDeptDetail.lead_name || 'Vacant'} · Co-Lead: {selectedDeptDetail.co_lead_name || 'Vacant'}
                   </p>
                 </div>
               </div>
@@ -279,8 +432,8 @@ export default function DepartmentsView({ showToast }) {
             </div>
 
             <div className="modal-body">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h4 style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>Enrolled Team Members</h4>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                <h4 style={{ fontSize: '0.95rem', color: 'var(--text-muted)', margin: 0 }}>Enrolled Department Team</h4>
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => openAssignModal(selectedDeptDetail)}
@@ -303,33 +456,42 @@ export default function DepartmentsView({ showToast }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedDeptDetail.members.map((m) => (
-                        <tr key={m.id}>
-                          <td>
-                            <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{m.full_name}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>{m.email}</div>
-                          </td>
-                          <td style={{ fontFamily: 'monospace' }}>{m.college_id}</td>
-                          <td>{m.year} · {m.branch}</td>
-                          <td>{m.position}</td>
-                          <td>
-                            {m.id === selectedDeptDetail.lead_member_id ? (
-                              <span className="badge badge-success"><UserCheck size={12} /> Lead</span>
-                            ) : (
-                              <span className="badge badge-neutral">Member</span>
-                            )}
-                          </td>
-                          <td>
-                            <button
-                              className="btn btn-danger btn-sm"
-                              onClick={() => handleRemoveMember(selectedDeptDetail.id, m.id, m.full_name)}
-                              title="Remove from Department"
-                            >
-                              <UserMinus size={13} /> Remove
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {selectedDeptDetail.members.map((m) => {
+                        const isLead = m.id === selectedDeptDetail.lead_member_id;
+                        const isCoLead = m.id === selectedDeptDetail.co_lead_member_id;
+
+                        return (
+                          <tr key={m.id}>
+                            <td>
+                              <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{m.full_name}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>{m.email}</div>
+                            </td>
+                            <td style={{ fontFamily: 'monospace' }}>{m.college_id}</td>
+                            <td>{m.year} · {m.branch}</td>
+                            <td>{m.position}</td>
+                            <td>
+                              {isLead ? (
+                                <span className="badge badge-success"><UserCheck size={12} /> Lead</span>
+                              ) : isCoLead ? (
+                                <span className="badge badge-info" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                                  <ShieldCheck size={12} /> Co-Lead
+                                </span>
+                              ) : (
+                                <span className="badge badge-neutral">Member</span>
+                              )}
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleRemoveMember(selectedDeptDetail.id, m.id, m.full_name)}
+                                title="Remove from Department"
+                              >
+                                <UserMinus size={13} /> Remove
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -347,10 +509,12 @@ export default function DepartmentsView({ showToast }) {
         </div>
       )}
 
-      {/* Edit Department Modal */}
+      {/* =========================================================
+          MODAL: EDIT DEPARTMENT
+          ========================================================= */}
       {isEditDeptOpen && (
         <div className="modal-overlay">
-          <div className="modal-card">
+          <div className="modal-card" style={{ maxWidth: '520px' }}>
             <div className="modal-header">
               <h3>Edit Department Information</h3>
               <button className="btn-icon" onClick={() => setIsEditDeptOpen(false)}><X size={16} /></button>
@@ -371,9 +535,42 @@ export default function DepartmentsView({ showToast }) {
                   <label className="form-label">Department Description</label>
                   <textarea
                     className="form-textarea"
+                    rows="3"
                     value={deptForm.description}
                     onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })}
                   />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Department Lead</label>
+                  <select
+                    className="form-select"
+                    value={deptForm.lead_member_id}
+                    onChange={(e) => setDeptForm({ ...deptForm, lead_member_id: e.target.value })}
+                  >
+                    <option value="">-- No Lead (Vacant) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Department Co-Lead</label>
+                  <select
+                    className="form-select"
+                    value={deptForm.co_lead_member_id}
+                    onChange={(e) => setDeptForm({ ...deptForm, co_lead_member_id: e.target.value })}
+                  >
+                    <option value="">-- No Co-Lead (Vacant) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="modal-footer">
@@ -385,7 +582,84 @@ export default function DepartmentsView({ showToast }) {
         </div>
       )}
 
-      {/* Assign Member Modal */}
+      {/* =========================================================
+          MODAL: CREATE NEW DEPARTMENT
+          ========================================================= */}
+      {isCreateDeptOpen && (
+        <div className="modal-overlay">
+          <div className="modal-card" style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>Create New Club Department</h3>
+              <button className="btn-icon" onClick={() => setIsCreateDeptOpen(false)}><X size={16} /></button>
+            </div>
+            <form onSubmit={handleCreateDeptSubmit}>
+              <div className="modal-body">
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Department Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder="e.g. Project & Innovation"
+                    value={newDeptForm.name}
+                    onChange={(e) => setNewDeptForm({ ...newDeptForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Department Description</label>
+                  <textarea
+                    className="form-textarea"
+                    rows="3"
+                    placeholder="Describe the department's mission, responsibilities, and student engagement scope..."
+                    value={newDeptForm.description}
+                    onChange={(e) => setNewDeptForm({ ...newDeptForm, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Appoint Department Lead</label>
+                  <select
+                    className="form-select"
+                    value={newDeptForm.lead_member_id}
+                    onChange={(e) => setNewDeptForm({ ...newDeptForm, lead_member_id: e.target.value })}
+                  >
+                    <option value="">-- No Lead (Optional) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Appoint Department Co-Lead</label>
+                  <select
+                    className="form-select"
+                    value={newDeptForm.co_lead_member_id}
+                    onChange={(e) => setNewDeptForm({ ...newDeptForm, co_lead_member_id: e.target.value })}
+                  >
+                    <option value="">-- No Co-Lead (Optional) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsCreateDeptOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Create Department</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL: ASSIGN MEMBER TO DEPARTMENT
+          ========================================================= */}
       {isAssignMemberOpen && activeDept && (
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '480px' }}>
@@ -424,18 +698,23 @@ export default function DepartmentsView({ showToast }) {
         </div>
       )}
 
-      {/* Change Lead Modal */}
+      {/* =========================================================
+          MODAL: CHANGE LEAD
+          ========================================================= */}
       {isChangeLeadOpen && activeDept && (
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '480px' }}>
             <div className="modal-header">
-              <h3>Change Department Lead: {activeDept.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UserCheck size={20} color="var(--primary-light)" />
+                <h3 style={{ margin: 0 }}>Change Department Lead</h3>
+              </div>
               <button className="btn-icon" onClick={() => setIsChangeLeadOpen(false)}><X size={16} /></button>
             </div>
             <form onSubmit={handleChangeLeadSubmit}>
               <div className="modal-body">
                 <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                  Select an existing club member to appoint as the official Lead for <strong>{activeDept.name}</strong>:
+                  Select a club member to appoint as official <strong>Department Lead</strong> for <strong>{activeDept.name}</strong>:
                 </p>
                 <div className="form-group">
                   <label className="form-label">Select Lead Member</label>
@@ -455,7 +734,52 @@ export default function DepartmentsView({ showToast }) {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsChangeLeadOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Set As Lead</button>
+                <button type="submit" className="btn btn-primary">Set As Department Lead</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL: CHANGE CO-LEAD
+          ========================================================= */}
+      {isChangeCoLeadOpen && activeDept && (
+        <div className="modal-overlay">
+          <div className="modal-card" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={20} color="#38bdf8" />
+                <h3 style={{ margin: 0 }}>Change Department Co-Lead</h3>
+              </div>
+              <button className="btn-icon" onClick={() => setIsChangeCoLeadOpen(false)}><X size={16} /></button>
+            </div>
+            <form onSubmit={handleChangeCoLeadSubmit}>
+              <div className="modal-body">
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                  Select a club member to appoint as official <strong>Department Co-Lead</strong> for <strong>{activeDept.name}</strong>:
+                </p>
+                <div className="form-group">
+                  <label className="form-label">Select Co-Lead Member</label>
+                  <select
+                    className="form-select"
+                    value={newCoLeadId}
+                    onChange={(e) => setNewCoLeadId(e.target.value)}
+                  >
+                    <option value="">-- No Co-Lead (Vacant) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsChangeCoLeadOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#0284c7', borderColor: '#0284c7' }}>
+                  Set As Department Co-Lead
+                </button>
               </div>
             </form>
           </div>

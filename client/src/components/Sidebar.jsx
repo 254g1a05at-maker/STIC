@@ -50,7 +50,7 @@ export default function Sidebar({ currentView, setView, mobileOpen, setMobileOpe
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'members', label: 'Club Members', icon: Users, badge: stats?.summary?.totalMembers },
-        { id: 'departments', label: 'Departments & Teams', icon: Building2, badge: 5 },
+        { id: 'departments', label: 'Departments & Teams', icon: Building2, badge: stats?.summary?.totalDepartments || stats?.departments?.length || 6 },
         { id: 'all-members', label: 'All Members Directory', icon: FolderOpen }
       ]
     },

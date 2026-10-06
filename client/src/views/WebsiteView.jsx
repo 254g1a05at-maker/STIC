@@ -19,7 +19,9 @@ import {
   Sparkles,
   Info,
   Sliders,
-  AlertTriangle
+  AlertTriangle,
+  Lightbulb,
+  Building2
 } from 'lucide-react';
 import { api, authState } from '../api';
 
@@ -604,6 +606,50 @@ export default function WebsiteView({ showToast, setView }) {
                 onClick={() => setView('programs')}
               >
                 View Events Showcase
+              </button>
+            </div>
+
+            <div className="stic-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-light)' }}>
+                  <Lightbulb size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Project &amp; Innovation</h4>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--primary-light)' }}>Prototypes &amp; Patents</span>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+                Manage student engineering projects, smart green computing models, patents, and campus innovation challenge showcases.
+              </p>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: 'auto' }}
+                onClick={() => setView('departments')}
+              >
+                Manage Projects &amp; Innovation
+              </button>
+            </div>
+
+            <div className="stic-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Departments &amp; Leadership</h4>
+                  <span style={{ fontSize: '0.74rem', color: '#38bdf8' }}>Leads &amp; Co-Leads</span>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+                Manage all 6 collegiate departments with designated Department Leads and Co-Leads, member rosters, and operational mandates.
+              </p>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ marginTop: 'auto' }}
+                onClick={() => setView('departments')}
+              >
+                Manage All Departments
               </button>
             </div>
           </div>

@@ -83,7 +83,43 @@ const AVAILABLE_ROLES = [
     defaultPassword: 'stic@1234',
     description: 'Technical & Website Management Role'
   },
-  // --- 3. WORKING COMMITTEE DEPARTMENT LEADS ---
+  // --- 3. WORKING COMMITTEE DEPARTMENT LEADS & CO-LEADS ---
+  {
+    id: 'Technical Lead',
+    name: 'Technical Lead',
+    title: 'Technical & Infrastructure Lead',
+    category: 'lead',
+    badge: 'Working Committee Lead · Restricted from Finance Section',
+    defaultPassword: 'stic@1234',
+    description: 'Tech Infrastructure, Systems & Digital Solutions'
+  },
+  {
+    id: 'Technical Co-Lead',
+    name: 'Technical Co-Lead',
+    title: 'Technical & Infrastructure Co-Lead',
+    category: 'colead',
+    badge: 'Working Committee Co-Lead · Restricted from Finance Section',
+    defaultPassword: 'stic@1234',
+    description: 'Assisting in Tech Infrastructure, Code Labs & Systems'
+  },
+  {
+    id: 'Project and Innovation Lead',
+    name: 'Project and Innovation Lead',
+    title: 'Project & Innovation Lead',
+    category: 'lead',
+    badge: 'Working Committee Lead · Restricted from Finance Section',
+    defaultPassword: 'stic@1234',
+    description: 'Student Hardware/Software Prototypes, Patents & Competitions'
+  },
+  {
+    id: 'Project and Innovation Co-Lead',
+    name: 'Project and Innovation Co-Lead',
+    title: 'Project & Innovation Co-Lead',
+    category: 'colead',
+    badge: 'Working Committee Co-Lead · Restricted from Finance Section',
+    defaultPassword: 'stic@1234',
+    description: 'Assisting in Student Project Prototypes & Patent Inventions'
+  },
   {
     id: 'Content and Documentation Lead',
     name: 'Content and Documentation Lead',
@@ -92,6 +128,15 @@ const AVAILABLE_ROLES = [
     badge: 'Working Committee Lead · Restricted from Finance Section',
     defaultPassword: 'stic@1234',
     description: 'Editorial, Official Reports, Documents & Minutes'
+  },
+  {
+    id: 'Content & Documentation Co-Lead',
+    name: 'Content & Documentation Co-Lead',
+    title: 'Content & Documentation Co-Lead',
+    category: 'colead',
+    badge: 'Working Committee Co-Lead · Restricted from Finance Section',
+    defaultPassword: 'stic@1234',
+    description: 'Assisting in Event Reports, Documentation & Templates'
   },
   {
     id: 'Social Media Lead',
@@ -103,13 +148,13 @@ const AVAILABLE_ROLES = [
     description: 'Digital Media, Campaigns, Photos & Video Archives'
   },
   {
-    id: 'Technical Lead',
-    name: 'Technical Lead',
-    title: 'Technical & Infrastructure Lead',
-    category: 'lead',
-    badge: 'Working Committee Lead · Restricted from Finance Section',
+    id: 'Social Media Co-Lead',
+    name: 'Social Media Co-Lead',
+    title: 'Social Media & Outreach Co-Lead',
+    category: 'colead',
+    badge: 'Working Committee Co-Lead · Restricted from Finance Section',
     defaultPassword: 'stic@1234',
-    description: 'Tech Infrastructure, Systems & Digital Solutions'
+    description: 'Assisting in Digital Media, Reels, Stories & Outreach'
   },
   {
     id: 'Finance Lead',
@@ -119,6 +164,33 @@ const AVAILABLE_ROLES = [
     badge: 'Working Committee Lead · Exclusive Finance Access',
     defaultPassword: 'stic@1234',
     description: 'Exclusive Management of Accounts, Incomes & Expenditures'
+  },
+  {
+    id: 'Finance Co-Lead',
+    name: 'Finance Co-Lead',
+    title: 'Finance & Accounts Co-Lead',
+    category: 'finance_lead',
+    badge: 'Working Committee Co-Lead · Exclusive Finance Access',
+    defaultPassword: 'stic@1234',
+    description: 'Assisting in Management of Accounts, Ledger & Sponsorships'
+  },
+  {
+    id: 'Event Management Lead',
+    name: 'Event Management Lead',
+    title: 'Event Management & Logistics Lead',
+    category: 'lead',
+    badge: 'Working Committee Lead · Restricted from Finance Section',
+    defaultPassword: 'stic@1234',
+    description: 'Event Organization, Venue Requisitions & Campus Outreach'
+  },
+  {
+    id: 'Event Management Co-Lead',
+    name: 'Event Management Co-Lead',
+    title: 'Event Management & Logistics Co-Lead',
+    category: 'colead',
+    badge: 'Working Committee Co-Lead · Restricted from Finance Section',
+    defaultPassword: 'stic@1234',
+    description: 'Assisting in Logistics, Volunteer Coordination & Stages'
   }
 ];
 
@@ -365,7 +437,7 @@ export default function LoginView({
                   autoFocus
                 >
                   <option value="" disabled style={{ background: 'var(--bg-surface)', color: 'var(--text-subtle)' }}>
-                    -- Select Role (Choose 1 of 12 Roles) --
+                    -- Select Role (Representatives, Handler, Leads &amp; Co-Leads) --
                   </option>
                   <optgroup label="Club Representatives & Leadership" style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>
                     {AVAILABLE_ROLES.filter(r => r.category === 'representative').map((role) => (
@@ -381,10 +453,10 @@ export default function LoginView({
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="Working Committee Department Leads" style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>
-                    {AVAILABLE_ROLES.filter(r => r.category === 'lead' || r.category === 'finance_lead').map((role) => (
+                  <optgroup label="Working Committee Department Leads & Co-Leads" style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>
+                    {AVAILABLE_ROLES.filter(r => r.category === 'lead' || r.category === 'colead' || r.category === 'finance_lead').map((role) => (
                       <option key={role.name} value={role.name} style={{ background: 'var(--bg-surface)', color: 'var(--text-main)', padding: '8px' }}>
-                        {role.name} {role.category === 'lead' ? '(Finance Restricted)' : '(Finance Access)'}
+                        {role.name} {role.category === 'finance_lead' ? '(Finance Access)' : ''}
                       </option>
                     ))}
                   </optgroup>

@@ -348,7 +348,7 @@ export default function App() {
           )}
 
           {currentView === 'departments' && (
-            <DepartmentsView showToast={showToast} />
+            <DepartmentsView showToast={showToast} onRefreshStats={loadInitialData} />
           )}
 
           {currentView === 'programs' && (

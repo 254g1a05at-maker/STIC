@@ -1084,11 +1084,12 @@ function getStaticMockData(endpoint, options = {}) {
           programsThisMonth: 3
         },
         departments: [
-          { id: 1, name: 'Technical & Innovation', count: 34, lead_name: 'Technical Lead' },
-          { id: 2, name: 'Content & Documentation', count: 22, lead_name: 'Content Lead' },
-          { id: 3, name: 'Social Media & Branding', count: 26, lead_name: 'Social Media Lead' },
-          { id: 4, name: 'Finance & Treasury', count: 14, lead_name: 'Finance Lead' },
-          { id: 5, name: 'Events & Operations', count: 32, lead_name: 'Events Coordinator' }
+          { id: 1, name: 'Content & Documentation', count: 22, lead_name: 'Neha Verma', co_lead_name: 'Ananya Deshmukh' },
+          { id: 2, name: 'Finance & Sponsorship', count: 14, lead_name: 'Sneha Kulkarni', co_lead_name: 'Rohan Mehra' },
+          { id: 3, name: 'Social Media & Publicity', count: 26, lead_name: 'Siddharth Nair', co_lead_name: 'Pooja Iyer' },
+          { id: 4, name: 'Technical & Infrastructure', count: 34, lead_name: 'Kaviraj Patel', co_lead_name: 'Aarav Sharma' },
+          { id: 5, name: 'Event Coordinators', count: 32, lead_name: 'Vikram Singh', co_lead_name: 'Aditya Varma' },
+          { id: 6, name: 'Project & Innovation', count: 18, lead_name: 'Divya Reddy', co_lead_name: 'Rahul Kapoor' }
         ],
         recentPrograms: [
           { id: 1, title: 'Annual Sustainable Tech Hackathon 2026', program_date: '2026-10-15', status: 'Upcoming', venue: 'SRIT Main Auditorium' },
@@ -1206,11 +1207,12 @@ function getStaticMockData(endpoint, options = {}) {
     return {
       success: true,
       data: [
-        { id: 1, name: 'Technical & Innovation', description: 'Handles software engineering, hackathons, and technical development.', member_count: 34 },
-        { id: 2, name: 'Content & Documentation', description: 'Manages official documentation, meeting minutes, and event reports.', member_count: 22 },
-        { id: 3, name: 'Social Media & Branding', description: 'Maintains club presence, graphics, announcements, and coverage.', member_count: 26 },
-        { id: 4, name: 'Finance & Treasury', description: 'Manages budgets, ledger transactions, and club accounts.', member_count: 14 },
-        { id: 5, name: 'Events & Operations', description: 'Coordinates event logistics, guest hosting, and venues.', member_count: 32 }
+        { id: 1, name: 'Content & Documentation', description: 'Manages official documentation, meeting minutes, and event reports.', member_count: 22, lead_name: 'Neha Verma', co_lead_name: 'Ananya Deshmukh' },
+        { id: 2, name: 'Finance & Sponsorship', description: 'Manages budgets, ledger transactions, and club accounts.', member_count: 14, lead_name: 'Sneha Kulkarni', co_lead_name: 'Rohan Mehra' },
+        { id: 3, name: 'Social Media & Publicity', description: 'Maintains club presence, graphics, announcements, and coverage.', member_count: 26, lead_name: 'Siddharth Nair', co_lead_name: 'Pooja Iyer' },
+        { id: 4, name: 'Technical & Infrastructure', description: 'Handles software engineering, web portal, systems, and technical infrastructure.', member_count: 34, lead_name: 'Kaviraj Patel', co_lead_name: 'Aarav Sharma' },
+        { id: 5, name: 'Event Coordinators', description: 'Coordinates event logistics, guest hosting, volunteers, and venues.', member_count: 32, lead_name: 'Vikram Singh', co_lead_name: 'Aditya Varma' },
+        { id: 6, name: 'Project & Innovation', description: 'Drives student-led engineering prototypes, green hardware, research papers, and patent filings.', member_count: 18, lead_name: 'Divya Reddy', co_lead_name: 'Rahul Kapoor' }
       ]
     };
   }
@@ -1304,6 +1306,11 @@ export const api = {
   // Departments
   getDepartments: () => request('/departments'),
   getDepartment: (id) => request(`/departments/${id}`),
+  createDepartment: (data) =>
+    request('/departments', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
   updateDepartment: (id, data) =>
     request(`/departments/${id}`, {
       method: 'PUT',

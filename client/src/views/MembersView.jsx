@@ -31,11 +31,19 @@ export const REPRESENTATIVE_POSITIONS = [
   'Vice President',
   'Co-Vice President',
   'General Secretary',
+  'Secretary',
+  'Project & Innovation Lead',
+  'Project & Innovation Co-Lead',
   'Technical Lead',
+  'Technical Co-Lead',
   'Content & Documentation Lead',
+  'Content & Documentation Co-Lead',
   'Social Media & PR Lead',
+  'Social Media Co-Lead',
   'Finance & Treasurer Lead',
+  'Finance Co-Lead',
   'Event Management Lead',
+  'Event Management Co-Lead',
   'Event Coordinator'
 ];
 
@@ -47,11 +55,30 @@ export const getRoleRank = (pos = '') => {
   if (p === 'vice president') return 2;
   if (p.includes('co-vice president') || p.includes('co - vice president') || p === 'covp') return 3;
   if (p.includes('secretary')) return 4;
-  if (p.includes('technical') || p.includes('tech lead')) return 5;
-  if (p.includes('content') || p.includes('editorial') || (p.includes('documentation') && p.includes('lead'))) return 6;
-  if (p.includes('social') || p.includes('publicity') || p.includes('pr lead')) return 7;
-  if (p.includes('finance') || p.includes('treasurer')) return 8;
-  if (p.includes('event') || p.includes('coordinator') || p.includes('manager')) return 9;
+  if (p.includes('project') || p.includes('innovation')) {
+    if (p.includes('co-lead') || p.includes('co lead')) return 5.5;
+    return 5.1;
+  }
+  if (p.includes('technical') || p.includes('tech lead')) {
+    if (p.includes('co-lead') || p.includes('co lead')) return 6.5;
+    return 6;
+  }
+  if (p.includes('content') || p.includes('editorial') || (p.includes('documentation') && p.includes('lead'))) {
+    if (p.includes('co-lead') || p.includes('co lead')) return 7.5;
+    return 7;
+  }
+  if (p.includes('social') || p.includes('publicity') || p.includes('pr lead')) {
+    if (p.includes('co-lead') || p.includes('co lead')) return 8.5;
+    return 8;
+  }
+  if (p.includes('finance') || p.includes('treasurer')) {
+    if (p.includes('co-lead') || p.includes('co lead')) return 9.5;
+    return 9;
+  }
+  if (p.includes('event') || p.includes('coordinator') || p.includes('manager')) {
+    if (p.includes('co-lead') || p.includes('co lead')) return 10.5;
+    return 10;
+  }
   return 999;
 };
 
@@ -125,8 +152,32 @@ export const getRoleDetails = (position = '') => {
     };
   }
 
+  // Project & Innovation Lead
+  if ((p.includes('project') || p.includes('innovation')) && p.includes('lead') && !p.includes('co-lead') && !p.includes('co lead')) {
+    return {
+      supportsTag: null,
+      duties: [
+        'Direct student hardware, IoT, AI & green sustainability projects',
+        'Lead prototype incubations, campus trials & patent applications',
+        'Mentor student hackathon teams and technical research papers'
+      ]
+    };
+  }
+
+  // Project & Innovation Co-Lead
+  if ((p.includes('project') || p.includes('innovation')) && (p.includes('co-lead') || p.includes('co lead'))) {
+    return {
+      supportsTag: 'Supports Project & Innovation Lead',
+      duties: [
+        'Assist in tracking project milestones, lab equipment & components',
+        'Support hackathon project teams and prototype demonstrations',
+        'Coordinate project exhibitions, patent drafts and student mentorship'
+      ]
+    };
+  }
+
   // 4th Role: Technical Lead
-  if (p.includes('technical') || p.includes('tech lead')) {
+  if ((p.includes('technical') || p.includes('tech lead')) && !p.includes('co-lead') && !p.includes('co lead')) {
     return {
       supportsTag: null,
       duties: [
@@ -137,7 +188,29 @@ export const getRoleDetails = (position = '') => {
     };
   }
 
+  // Technical Co-Lead
+  if ((p.includes('technical') || p.includes('tech lead')) && (p.includes('co-lead') || p.includes('co lead'))) {
+    return {
+      supportsTag: 'Supports Technical Lead',
+      duties: [
+        'Assist in software development and technical infrastructure maintenance',
+        'Support hands-on coding sessions and hackathon environments',
+        'Guide junior members on tools, frameworks and Git workflows'
+      ]
+    };
+  }
+
   if (p.includes('content') && (p.includes('documentation') || p.includes('lead') || p.includes('editorial'))) {
+    if (p.includes('co-lead') || p.includes('co lead')) {
+      return {
+        supportsTag: 'Supports Content & Documentation Lead',
+        duties: [
+          'Assist in compiling event briefs, newsletters and official circulars',
+          'Coordinate document templates and review meeting minutes',
+          'Maintain digital document archives and certificates'
+        ]
+      };
+    }
     return {
       supportsTag: null,
       duties: [
@@ -149,6 +222,16 @@ export const getRoleDetails = (position = '') => {
   }
 
   if (p.includes('social') && (p.includes('media') || p.includes('lead') || p.includes('publicity'))) {
+    if (p.includes('co-lead') || p.includes('co lead')) {
+      return {
+        supportsTag: 'Supports Social Media Lead',
+        duties: [
+          'Assist in poster graphics, reel edits, and story updates',
+          'Support social media captioning and event day live updates',
+          'Organize photo and video media asset folders'
+        ]
+      };
+    }
     return {
       supportsTag: null,
       duties: [
@@ -160,6 +243,16 @@ export const getRoleDetails = (position = '') => {
   }
 
   if (p.includes('finance') || p.includes('treasurer')) {
+    if (p.includes('co-lead') || p.includes('co lead')) {
+      return {
+        supportsTag: 'Supports Finance Lead',
+        duties: [
+          'Assist in invoice verification and expense receipt uploads',
+          'Track vendor payments and balance reconciliation',
+          'Support sponsorship outreach correspondence'
+        ]
+      };
+    }
     return {
       supportsTag: null,
       duties: [
@@ -172,6 +265,16 @@ export const getRoleDetails = (position = '') => {
 
   // 5th Role: All Event Coordinators / Event Managers
   if (p.includes('event') || p.includes('coordinator') || p.includes('manager')) {
+    if (p.includes('co-lead') || p.includes('co lead')) {
+      return {
+        supportsTag: 'Supports Event Management Lead',
+        duties: [
+          'Assist in venue booking, participant check-in desks & certificates',
+          'Coordinate stage sound, projector setup, and volunteers',
+          'Ensure disciplined flow of events and guest hospitality'
+        ]
+      };
+    }
     return {
       supportsTag: null,
       duties: [

@@ -37,6 +37,7 @@ function initDb() {
       name TEXT UNIQUE NOT NULL,
       description TEXT,
       lead_member_id INTEGER,
+      co_lead_member_id INTEGER,
       icon TEXT,
       is_demo INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -687,8 +688,9 @@ function initDb() {
       { name: 'Content & Documentation', desc: 'Crafts official club reports, newsletters, event write-ups, certificates, and archival logs.', icon: 'FileText' },
       { name: 'Finance & Sponsorship', desc: 'Manages budgets, track expenses, coordinates corporate sponsorships, audits grants, and maintains transparency.', icon: 'IndianRupee' },
       { name: 'Social Media & Publicity', desc: 'Builds brand presence, runs Instagram, YouTube, and LinkedIn campaigns, and designs promotional graphics.', icon: 'Share2' },
-      { name: 'Technical & Innovation', desc: 'Builds IoT, AI, solar, circular-waste hardware prototypes, and powers club software infrastructure.', icon: 'Cpu' },
-      { name: 'Event Coordinators', desc: 'Leads end-to-end logistics, campus outreach, stage management, volunteer delegation, and venue setup.', icon: 'CalendarCheck' }
+      { name: 'Technical & Infrastructure', desc: 'Builds club software infrastructure, web portal, systems, coding bootcamps, and technical architectures.', icon: 'Cpu' },
+      { name: 'Event Coordinators', desc: 'Leads end-to-end logistics, campus outreach, stage management, volunteer delegation, and venue setup.', icon: 'CalendarCheck' },
+      { name: 'Project & Innovation', desc: 'Drives cutting-edge student projects, green engineering prototypes, patent applications, research papers, and technical innovation challenges.', icon: 'Lightbulb' }
     ];
 
     const insertDept = db.prepare(`
@@ -697,8 +699,11 @@ function initDb() {
     for (const d of standardDepts) {
       insertDept.run(d.name, d.desc, d.icon);
     }
-    console.log('[DB] Standard 5 departments initialized.');
+    console.log('[DB] Standard 6 departments initialized.');
   }
+
+  // Ensure Project & Innovation department and co-leads for all departments
+  ensureDepartmentsAndLeads(db);
 
   // Seed demo data if members table is empty
   seedInitialDemoData();
@@ -972,9 +977,183 @@ function clearDemoData() {
   return runAll();
 }
 
+function ensureDepartmentsAndLeads(database) {
+  // 1. Ensure co_lead_member_id column exists
+  try {
+    const deptCols = database.prepare("PRAGMA table_info(departments)").all();
+    if (!deptCols.some(c => c.name === 'co_lead_member_id')) {
+      database.prepare("ALTER TABLE departments ADD COLUMN co_lead_member_id INTEGER REFERENCES club_members(id) ON DELETE SET NULL").run();
+      console.log('[DB] Added co_lead_member_id column to departments table');
+    }
+  } catch (e) {
+    console.error('Error migrating departments.co_lead_member_id:', e);
+  }
+
+  // 2. Rename 'Technical & Innovation' to 'Technical & Infrastructure' if present, to keep Technical and Project & Innovation distinct
+  try {
+    database.prepare(`
+      UPDATE departments 
+      SET name = 'Technical & Infrastructure', 
+          description = 'Builds club software infrastructure, web portal, systems, coding bootcamps, and technical architectures.',
+          icon = 'Cpu'
+      WHERE name = 'Technical & Innovation'
+    `).run();
+  } catch (e) {}
+
+  // 3. Ensure 'Project & Innovation' department exists
+  try {
+    const projectDept = database.prepare("SELECT * FROM departments WHERE name = 'Project & Innovation' OR name = 'Project and Innovation'").get();
+    if (!projectDept) {
+      database.prepare(`
+        INSERT INTO departments (name, description, icon, is_demo)
+        VALUES (
+          'Project & Innovation',
+          'Drives cutting-edge student projects, green engineering prototypes, patent applications, research papers, and technical innovation challenges.',
+          'Lightbulb',
+          0
+        )
+      `).run();
+      console.log('[DB] Created Project & Innovation department');
+    }
+  } catch (e) {
+    console.error('Error creating Project & Innovation department:', e);
+  }
+
+  // 4. Map and configure leads & co-leads for all departments
+  try {
+    const allDepts = database.prepare('SELECT id, name FROM departments').all();
+    const deptByName = {};
+    allDepts.forEach(d => { deptByName[d.name] = d.id; });
+
+    // Helper to find member by IDs or partial name/position
+    const findMember = (conditions) => {
+      for (const cond of conditions) {
+        if (typeof cond === 'number') {
+          const m = database.prepare('SELECT * FROM club_members WHERE id = ?').get(cond);
+          if (m) return m;
+        } else if (typeof cond === 'string') {
+          const m = database.prepare('SELECT * FROM club_members WHERE full_name LIKE ? OR position LIKE ? LIMIT 1').get(`%${cond}%`, `%${cond}%`);
+          if (m) return m;
+        }
+      }
+      return null;
+    };
+
+    // Configuration of standard 6 departments with Lead and Co-Lead assignments
+    const deptConfigs = [
+      {
+        deptNames: ['Content & Documentation'],
+        leadCandidates: [12, 'Neha Verma', 'Content and Documentation Lead'],
+        coLeadCandidates: [7, 'Ananya Deshmukh', 'Co-President'],
+        leadPosition: 'Content and Documentation Lead',
+        coLeadPosition: 'Content & Documentation Co-Lead',
+        icon: 'FileText',
+        desc: 'Crafts official club reports, newsletters, event write-ups, certificates, and archival logs.'
+      },
+      {
+        deptNames: ['Finance & Sponsorship'],
+        leadCandidates: [14, 'Sneha Kulkarni', 'Finance Lead'],
+        coLeadCandidates: [8, 'Rohan Mehra', 'Vice President'],
+        leadPosition: 'Finance Lead',
+        coLeadPosition: 'Finance Co-Lead',
+        icon: 'IndianRupee',
+        desc: 'Manages budgets, track expenses, coordinates corporate sponsorships, audits grants, and maintains transparency.'
+      },
+      {
+        deptNames: ['Social Media & Publicity'],
+        leadCandidates: [13, 'Siddharth Nair', 'Social Media Lead'],
+        coLeadCandidates: [9, 'Pooja Iyer', 'Co-Vice President'],
+        leadPosition: 'Social Media Lead',
+        coLeadPosition: 'Social Media Co-Lead',
+        icon: 'Share2',
+        desc: 'Builds brand presence, runs Instagram, YouTube, and LinkedIn campaigns, and designs promotional graphics.'
+      },
+      {
+        deptNames: ['Technical & Infrastructure', 'Technical & Innovation', 'Technical'],
+        leadCandidates: [11, 'Kaviraj Patel', 'Technical Lead'],
+        coLeadCandidates: [6, 'Aarav Sharma', 'President'],
+        leadPosition: 'Technical Lead',
+        coLeadPosition: 'Technical Co-Lead',
+        icon: 'Cpu',
+        desc: 'Builds club software infrastructure, systems, web tools, coding bootcamps, and technical architectures.'
+      },
+      {
+        deptNames: ['Event Coordinators', 'Events & Operations', 'Event Management'],
+        leadCandidates: [10, 'Vikram Singh', 'Secretary'],
+        coLeadCandidates: [15, 'Aditya Varma', 'Event Manager'],
+        leadPosition: 'Event Management Lead',
+        coLeadPosition: 'Event Management Co-Lead',
+        icon: 'CalendarCheck',
+        desc: 'Leads end-to-end logistics, campus outreach, stage management, volunteer delegation, and venue setup.'
+      },
+      {
+        deptNames: ['Project & Innovation', 'Project and Innovation'],
+        leadCandidates: [16, 'Divya Reddy'],
+        coLeadCandidates: [17, 'Rahul Kapoor'],
+        leadPosition: 'Project & Innovation Lead',
+        coLeadPosition: 'Project & Innovation Co-Lead',
+        icon: 'Lightbulb',
+        desc: 'Drives cutting-edge student projects, green engineering prototypes, patent applications, research papers, and technical innovation challenges.'
+      }
+    ];
+
+    for (const cfg of deptConfigs) {
+      let deptId = null;
+      for (const name of cfg.deptNames) {
+        if (deptByName[name]) {
+          deptId = deptByName[name];
+          break;
+        }
+      }
+
+      if (!deptId) continue;
+
+      const lead = findMember(cfg.leadCandidates);
+      const coLead = findMember(cfg.coLeadCandidates);
+
+      database.prepare(`
+        UPDATE departments 
+        SET lead_member_id = ?,
+            co_lead_member_id = ?,
+            icon = COALESCE(icon, ?),
+            description = COALESCE(description, ?)
+        WHERE id = ?
+      `).run(lead ? lead.id : null, coLead ? coLead.id : null, cfg.icon, cfg.desc, deptId);
+
+      if (lead) {
+        database.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(deptId, cfg.leadPosition, lead.id);
+      }
+      if (coLead) {
+        database.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(deptId, cfg.coLeadPosition, coLead.id);
+      }
+    }
+
+    // Assign some active members to Project & Innovation if it has few members
+    const projDeptId = deptByName['Project & Innovation'] || deptByName['Project and Innovation'];
+    if (projDeptId) {
+      const projCount = database.prepare('SELECT COUNT(*) as count FROM club_members WHERE department_id = ?').get(projDeptId).count;
+      if (projCount <= 2) {
+        database.prepare(`
+          UPDATE club_members 
+          SET department_id = ? 
+          WHERE id IN (
+            SELECT id FROM club_members 
+            WHERE department_id IS NULL 
+            LIMIT 6
+          )
+        `).run(projDeptId);
+        console.log('[DB] Allocated student members to Project & Innovation department roster.');
+      }
+    }
+  } catch (err) {
+    console.error('Error configuring department leads & co-leads:', err);
+  }
+}
+
 module.exports = {
   db,
   initDb,
   clearDemoData,
-  seedInitialDemoData
+  seedInitialDemoData,
+  ensureDepartmentsAndLeads
 };

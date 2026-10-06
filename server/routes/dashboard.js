@@ -52,7 +52,7 @@ router.get('/stats', requireAuth, (req, res) => {
       });
     }
 
-    // Members by department with Lead name
+    // Members by department with Lead & Co-Lead names
     const deptStats = db.prepare(`
       SELECT 
         d.id,
@@ -61,9 +61,12 @@ router.get('/stats', requireAuth, (req, res) => {
         d.description,
         m.full_name as lead_name,
         m.email as lead_email,
-        (SELECT COUNT(*) FROM club_members cm WHERE cm.department_id = d.id) as member_count
+        cm.full_name as co_lead_name,
+        cm.email as co_lead_email,
+        (SELECT COUNT(*) FROM club_members mem WHERE mem.department_id = d.id) as member_count
       FROM departments d
       LEFT JOIN club_members m ON d.lead_member_id = m.id
+      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
       ORDER BY d.id ASC
     `).all();
 

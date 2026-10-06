@@ -350,21 +350,468 @@ async function handleSupabaseRequest(endpoint, options = {}) {
 
     // 3. Programs endpoint
     if (endpoint.startsWith('/programs')) {
-      if (method === 'GET') {
-        const { data, error } = await sb.from('programs').select('*').order('program_date', { ascending: false });
-        if (!error && data) return { success: true, count: data.length, data };
+      // 3A. Single Program GET: /programs/:id
+      const singleProgMatch = endpoint.match(/^\/programs\/(\d+)$/);
+      if (singleProgMatch && method === 'GET') {
+        const programId = Number(singleProgMatch[1]);
+        const { data: program, error } = await sb.from('programs').select('*').eq('id', programId).single();
+        if (error || !program) return null;
+
+        // Fetch coordinators with club_members details
+        const { data: coords } = await sb
+          .from('program_coordinators')
+          .select('id, role_title, member_id, club_members(id, full_name, college_id, email, phone, year, branch, profile_photo)')
+          .eq('program_id', programId);
+
+        const coordinators = (coords || []).map(c => ({
+          id: c.member_id,
+          member_id: c.member_id,
+          full_name: c.club_members?.full_name || 'Member',
+          college_id: c.club_members?.college_id || '',
+          email: c.club_members?.email || '',
+          phone: c.club_members?.phone || '',
+          year: c.club_members?.year || '',
+          branch: c.club_members?.branch || '',
+          profile_photo: c.club_members?.profile_photo || null,
+          role_title: c.role_title || 'Coordinator'
+        }));
+
+        // Fetch related finance, sponsors, photos, videos, documents safely
+        let totalIncome = 0;
+        let totalExpense = 0;
+        const incomeList = [];
+        const expenseList = [];
+        let transactions = [];
+        let sponsors = [];
+        let photos = [];
+        let videos = [];
+        let documents = [];
+
+        try {
+          const { data: txs } = await sb.from('transactions').select('*').eq('program_id', programId).order('date', { ascending: false });
+          if (txs) {
+            transactions = txs;
+            txs.forEach(t => {
+              const amt = Number(t.amount || 0);
+              if (t.type === 'Income') {
+                totalIncome += amt;
+                incomeList.push(t);
+              } else {
+                totalExpense += amt;
+                expenseList.push(t);
+              }
+            });
+          }
+        } catch (e) {}
+
+        try {
+          const { data: sps } = await sb.from('sponsors').select('*').eq('program_id', programId);
+          if (sps) sponsors = sps;
+        } catch (e) {}
+
+        try {
+          const { data: phs } = await sb.from('photos').select('*').eq('program_id', programId).order('id', { ascending: false });
+          if (phs) photos = phs;
+        } catch (e) {}
+
+        try {
+          const { data: vds } = await sb.from('videos').select('*').eq('program_id', programId).order('id', { ascending: false });
+          if (vds) videos = vds;
+        } catch (e) {}
+
+        try {
+          const { data: dcs } = await sb.from('documents').select('*').eq('program_id', programId).order('id', { ascending: false });
+          if (dcs) documents = dcs;
+        } catch (e) {}
+
+        const totalSponsorship = sponsors.reduce((acc, s) => acc + Number(s.amount || 0), 0);
+
+        return {
+          success: true,
+          data: {
+            ...program,
+            coordinators,
+            photos,
+            videos,
+            documents,
+            finance: {
+              total_income: totalIncome,
+              total_expense: totalExpense,
+              balance: totalIncome - totalExpense,
+              transactions,
+              income_list: incomeList,
+              expense_list: expenseList
+            },
+            sponsors: {
+              list: sponsors,
+              total_amount: totalSponsorship
+            },
+            social_media: []
+          }
+        };
+      }
+
+      // 3B. List Programs GET: /programs or /programs?...
+      if (!endpoint.match(/^\/programs\/\d+/) && method === 'GET') {
+        let query = sb.from('programs').select('*, program_coordinators(id, role_title, member_id, club_members(id, full_name, college_id, email, phone, profile_photo))');
+
+        if (endpoint.includes('?')) {
+          const queryStr = endpoint.substring(endpoint.indexOf('?') + 1);
+          const params = new URLSearchParams(queryStr);
+
+          const status = params.get('status');
+          if (status) query = query.eq('status', status);
+
+          const programType = params.get('program_type');
+          if (programType) query = query.eq('program_type', programType);
+
+          const year = params.get('year');
+          if (year) {
+            query = query.gte('program_date', `${year}-01-01`).lte('program_date', `${year}-12-31`);
+          }
+
+          const dateFrom = params.get('date_from');
+          if (dateFrom) query = query.gte('program_date', dateFrom);
+
+          const dateTo = params.get('date_to');
+          if (dateTo) query = query.lte('program_date', dateTo);
+
+          const search = params.get('search');
+          if (search && search.trim()) {
+            const s = search.trim();
+            query = query.or(`name.ilike.%${s}%,program_code.ilike.%${s}%,venue.ilike.%${s}%,description.ilike.%${s}%`);
+          }
+        }
+
+        query = query.order('program_date', { ascending: false }).order('id', { ascending: false });
+
+        const [{ data, error }, { count: totalConducted }] = await Promise.all([
+          query,
+          sb.from('programs').select('*', { count: 'exact', head: true }).eq('status', 'Completed')
+        ]);
+
+        if (error) {
+          console.warn('[Supabase GET Programs Error]', error);
+          return null;
+        }
+
+        const formatted = (data || []).map(p => {
+          const coordinators = (p.program_coordinators || []).map(pc => ({
+            member_id: pc.member_id,
+            role_title: pc.role_title || 'Coordinator',
+            full_name: pc.club_members?.full_name || '',
+            college_id: pc.club_members?.college_id || '',
+            email: pc.club_members?.email || '',
+            phone: pc.club_members?.phone || '',
+            profile_photo: pc.club_members?.profile_photo || null
+          }));
+          return {
+            ...p,
+            total_balance: p.total_balance || 0,
+            coordinators
+          };
+        });
+
+        return {
+          success: true,
+          count: formatted.length,
+          total_programs: formatted.length,
+          total_conducted: totalConducted || 0,
+          data: formatted
+        };
+      }
+
+      // 3C. Create Program POST: /programs
+      if (endpoint === '/programs' && method === 'POST') {
+        let row = {};
+        let coordinatorIds = [];
+
+        if (options.body instanceof FormData) {
+          options.body.forEach((val, key) => {
+            if (key === 'coordinator_ids') {
+              try {
+                coordinatorIds = typeof val === 'string' ? JSON.parse(val) : val;
+              } catch (e) {
+                coordinatorIds = String(val).split(',').map(s => s.trim()).filter(Boolean);
+              }
+            } else if (key !== 'poster') {
+              row[key] = val;
+            }
+          });
+        } else if (typeof options.body === 'string') {
+          try {
+            row = JSON.parse(options.body);
+            if (row.coordinator_ids) coordinatorIds = row.coordinator_ids;
+          } catch (e) { row = {}; }
+        } else if (options.body) {
+          row = { ...options.body };
+          if (row.coordinator_ids) coordinatorIds = row.coordinator_ids;
+        }
+
+        // Support poster file conversion to Data URL for Supabase
+        if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
+          const posterFile = options.body.get('poster');
+          if (posterFile && typeof posterFile === 'object' && posterFile.size > 0) {
+            try {
+              const dataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(posterFile);
+              });
+              if (dataUrl) row.poster_url = dataUrl;
+            } catch (e) {}
+          }
+        }
+
+        if (!row.name || !row.program_date) {
+          throw new Error('Program name and date are required.');
+        }
+
+        // Auto-generate program code if empty or whitespace
+        if (!row.program_code || !row.program_code.trim()) {
+          const currentYear = new Date().getFullYear();
+          const prefix = `STIC-${currentYear}-`;
+          const { data: lastRows } = await sb.from('programs')
+            .select('program_code')
+            .like('program_code', `${prefix}%`)
+            .order('program_code', { ascending: false })
+            .limit(20);
+
+          let maxNum = 0;
+          if (lastRows && lastRows.length > 0) {
+            lastRows.forEach(r => {
+              if (r.program_code) {
+                const parts = r.program_code.split('-');
+                const n = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(n) && n > maxNum) maxNum = n;
+              }
+            });
+          }
+          row.program_code = `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+        } else {
+          row.program_code = row.program_code.trim();
+        }
+
+        // Ensure mirrored request to Express gets the exact same generated program_code
+        if (options.body instanceof FormData) {
+          options.body.set('program_code', row.program_code);
+        }
+
+        delete row.id;
+        delete row.created_at;
+        delete row.updated_at;
+        delete row.coordinator_ids;
+        delete row.coordinators;
+        delete row.poster;
+
+        row.name = row.name.trim();
+        row.venue = row.venue ? row.venue.trim() : 'Campus Innovation Hall';
+        row.program_type = row.program_type || 'Workshop';
+        row.description = row.description ? row.description.trim() : null;
+        row.participants_count = row.participants_count ? Number(row.participants_count) : 0;
+        row.status = row.status || 'Planned';
+        row.poster_url = row.poster_url || null;
+        row.is_demo = row.is_demo ? 1 : 0;
+        row.created_by = authState.getUser()?.username || 'admin';
+        row.updated_by = authState.getUser()?.username || 'admin';
+
+        const allowedProgCols = new Set([
+          'program_code', 'name', 'program_date', 'start_time', 'end_time', 'venue',
+          'program_type', 'description', 'participants_count', 'status', 'poster_url',
+          'is_demo', 'created_by', 'updated_by'
+        ]);
+        const cleanRow = {};
+        for (const [k, v] of Object.entries(row)) {
+          if (allowedProgCols.has(k)) {
+            cleanRow[k] = v;
+          }
+        }
+
+        const { data: createdProg, error: insertErr } = await sb.from('programs').insert([cleanRow]).select().single();
+        if (insertErr) throw new Error(insertErr.message);
+
+        // Attach coordinators if provided
+        if (Array.isArray(coordinatorIds) && coordinatorIds.length > 0 && createdProg?.id) {
+          const coordRows = coordinatorIds
+            .map(mId => ({
+              program_id: createdProg.id,
+              member_id: Number(mId),
+              role_title: 'Coordinator'
+            }))
+            .filter(c => !isNaN(c.member_id) && c.member_id > 0);
+          if (coordRows.length > 0) {
+            await sb.from('program_coordinators').insert(coordRows);
+          }
+        }
+
+        return {
+          success: true,
+          message: 'Program scheduled successfully in Supabase cloud database.',
+          data: createdProg
+        };
+      }
+
+      // 3D. Update Program PUT: /programs/:id
+      const updateProgMatch = endpoint.match(/^\/programs\/(\d+)$/);
+      if (updateProgMatch && method === 'PUT') {
+        const programId = Number(updateProgMatch[1]);
+        let row = {};
+        let coordinatorIds = null;
+
+        if (options.body instanceof FormData) {
+          options.body.forEach((val, key) => {
+            if (key === 'coordinator_ids') {
+              try {
+                coordinatorIds = typeof val === 'string' ? JSON.parse(val) : val;
+              } catch (e) {
+                coordinatorIds = String(val).split(',').map(s => s.trim()).filter(Boolean);
+              }
+            } else if (key !== 'poster') {
+              row[key] = val;
+            }
+          });
+        } else if (typeof options.body === 'string') {
+          try {
+            row = JSON.parse(options.body);
+            if ('coordinator_ids' in row) coordinatorIds = row.coordinator_ids;
+          } catch (e) { row = {}; }
+        } else if (options.body) {
+          row = { ...options.body };
+          if ('coordinator_ids' in row) coordinatorIds = row.coordinator_ids;
+        }
+
+        if (options.body instanceof FormData && typeof FileReader !== 'undefined') {
+          const posterFile = options.body.get('poster');
+          if (posterFile && typeof posterFile === 'object' && posterFile.size > 0) {
+            try {
+              const dataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(posterFile);
+              });
+              if (dataUrl) row.poster_url = dataUrl;
+            } catch (e) {}
+          }
+        }
+
+        delete row.id;
+        delete row.created_at;
+        delete row.updated_at;
+        delete row.coordinator_ids;
+        delete row.coordinators;
+        delete row.poster;
+
+        if (row.name) row.name = row.name.trim();
+        if (row.venue) row.venue = row.venue.trim();
+        if (row.description) row.description = row.description.trim();
+        if ('participants_count' in row) row.participants_count = Number(row.participants_count) || 0;
+        row.updated_by = authState.getUser()?.username || 'admin';
+        row.updated_at = new Date().toISOString();
+
+        const allowedProgCols = new Set([
+          'program_code', 'name', 'program_date', 'start_time', 'end_time', 'venue',
+          'program_type', 'description', 'participants_count', 'status', 'poster_url',
+          'is_demo', 'updated_by', 'updated_at'
+        ]);
+        const cleanRow = {};
+        for (const [k, v] of Object.entries(row)) {
+          if (allowedProgCols.has(k)) {
+            cleanRow[k] = v;
+          }
+        }
+
+        let { data: updatedProg, error: updateErr } = await sb.from('programs').update(cleanRow).eq('id', programId).select().single();
+        if (updateErr && cleanRow.program_code) {
+          const res2 = await sb.from('programs').update(cleanRow).eq('program_code', cleanRow.program_code).select().single();
+          if (!res2.error && res2.data) {
+            updatedProg = res2.data;
+            updateErr = null;
+          }
+        }
+
+        if (updateErr) throw new Error(updateErr.message);
+
+        // Update coordinators if provided
+        if (Array.isArray(coordinatorIds)) {
+          await sb.from('program_coordinators').delete().eq('program_id', programId);
+          const coordRows = coordinatorIds
+            .map(mId => ({
+              program_id: programId,
+              member_id: Number(mId),
+              role_title: 'Coordinator'
+            }))
+            .filter(c => !isNaN(c.member_id) && c.member_id > 0);
+          if (coordRows.length > 0) {
+            await sb.from('program_coordinators').insert(coordRows);
+          }
+        }
+
+        return {
+          success: true,
+          message: 'Program updated successfully in Supabase cloud database.',
+          data: updatedProg
+        };
+      }
+
+      // 3E. Delete Program DELETE: /programs/:id
+      const delProgMatch = endpoint.match(/^\/programs\/(\d+)$/);
+      if (delProgMatch && method === 'DELETE') {
+        const programId = Number(delProgMatch[1]);
+        await sb.from('program_coordinators').delete().eq('program_id', programId);
+        const { error } = await sb.from('programs').delete().eq('id', programId);
+        if (error) throw new Error(error.message);
+        return { success: true, message: 'Program deleted from Supabase cloud database.' };
+      }
+
+      // 3F. Add Coordinator POST: /programs/:id/coordinators
+      const addCoordMatch = endpoint.match(/^\/programs\/(\d+)\/coordinators$/);
+      if (addCoordMatch && method === 'POST') {
+        const programId = Number(addCoordMatch[1]);
+        let body = {};
+        try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body; } catch (e) {}
+        const memberId = Number(body.member_id);
+        const roleTitle = body.role_title || 'Coordinator';
+        const { error } = await sb.from('program_coordinators').insert([{
+          program_id: programId,
+          member_id: memberId,
+          role_title: roleTitle
+        }]);
+        if (error) throw new Error(error.message);
+        return { success: true, message: 'Coordinator added.' };
+      }
+
+      // 3G. Remove Coordinator DELETE: /programs/:id/coordinators/:memberId
+      const rmCoordMatch = endpoint.match(/^\/programs\/(\d+)\/coordinators\/(\d+)$/);
+      if (rmCoordMatch && method === 'DELETE') {
+        const programId = Number(rmCoordMatch[1]);
+        const memberId = Number(rmCoordMatch[2]);
+        const { error } = await sb.from('program_coordinators').delete().eq('program_id', programId).eq('member_id', memberId);
+        if (error) throw new Error(error.message);
+        return { success: true, message: 'Coordinator removed.' };
       }
     }
 
     // 4. Dashboard Stats endpoint
     if (endpoint.startsWith('/dashboard/stats')) {
-      const [{ count: totalMembers }, { count: activeMembers }, { count: totalDepts }, { count: totalPrograms }] = await Promise.all([
+      const [
+        { count: totalMembers },
+        { count: activeMembers },
+        { count: totalDepts },
+        { count: totalPrograms },
+        { count: completedPrograms },
+        { count: upcomingPrograms }
+      ] = await Promise.all([
         sb.from('club_members').select('*', { count: 'exact', head: true }),
         sb.from('club_members').select('*', { count: 'exact', head: true }).eq('status', 'Active'),
         sb.from('departments').select('*', { count: 'exact', head: true }),
-        sb.from('programs').select('*', { count: 'exact', head: true })
+        sb.from('programs').select('*', { count: 'exact', head: true }),
+        sb.from('programs').select('*', { count: 'exact', head: true }).eq('status', 'Completed'),
+        sb.from('programs').select('*', { count: 'exact', head: true }).in('status', ['Planned', 'Upcoming'])
       ]);
       const { data: depts } = await sb.from('departments').select('*');
+      const { data: recentPrograms } = await sb.from('programs').select('*').order('program_date', { ascending: false }).limit(5);
       return {
         success: true,
         data: {
@@ -373,10 +820,10 @@ async function handleSupabaseRequest(endpoint, options = {}) {
             activeMembers: activeMembers || 0,
             totalDepartments: totalDepts || 0,
             totalPrograms: totalPrograms || 0,
-            upcomingPrograms: 0,
-            completedPrograms: totalPrograms || 0,
+            upcomingPrograms: upcomingPrograms || 0,
+            completedPrograms: completedPrograms || 0,
             ongoingPrograms: 0,
-            plannedPrograms: 0,
+            plannedPrograms: (totalPrograms || 0) - (completedPrograms || 0),
             totalCollected: 0,
             totalSpent: 0,
             currentBalance: 0,
@@ -386,7 +833,7 @@ async function handleSupabaseRequest(endpoint, options = {}) {
             programsThisMonth: 0
           },
           departments: (depts || []).map(d => ({ id: d.id, name: d.name, count: 0 })),
-          recentPrograms: [],
+          recentPrograms: recentPrograms || [],
           monthlyPrograms: []
         }
       };

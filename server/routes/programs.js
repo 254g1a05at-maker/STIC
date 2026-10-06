@@ -328,10 +328,14 @@ router.post('/', requireAuth, upload.single('poster'), (req, res) => {
 router.put('/:id', requireAuth, upload.single('poster'), (req, res) => {
   try {
     const programId = Number(req.params.id);
-    const existing = db.prepare('SELECT * FROM programs WHERE id = ?').get(programId);
+    let existing = db.prepare('SELECT * FROM programs WHERE id = ?').get(programId);
+    if (!existing && req.body && req.body.program_code) {
+      existing = db.prepare('SELECT * FROM programs WHERE program_code = ?').get(req.body.program_code.trim());
+    }
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Program not found.' });
     }
+    const effectiveId = existing.id;
 
     const {
       name,
@@ -349,7 +353,7 @@ router.put('/:id', requireAuth, upload.single('poster'), (req, res) => {
     } = req.body;
 
     if (program_code && program_code.trim() !== existing.program_code) {
-      const duplicate = db.prepare('SELECT id FROM programs WHERE program_code = ? AND id != ?').get(program_code.trim(), programId);
+      const duplicate = db.prepare('SELECT id FROM programs WHERE program_code = ? AND id != ?').get(program_code.trim(), effectiveId);
       if (duplicate) {
         return res.status(400).json({ success: false, message: `Program Code "${program_code}" is already in use.` });
       }
@@ -391,7 +395,7 @@ router.put('/:id', requireAuth, upload.single('poster'), (req, res) => {
       status || null,
       poster,
       req.user.username,
-      programId
+      effectiveId
     );
 
     // Update coordinators if explicitly provided
@@ -405,17 +409,17 @@ router.put('/:id', requireAuth, upload.single('poster'), (req, res) => {
         }
       }
 
-      db.prepare('DELETE FROM program_coordinators WHERE program_id = ?').run(programId);
+      db.prepare('DELETE FROM program_coordinators WHERE program_id = ?').run(effectiveId);
       const insertCoord = db.prepare(`
         INSERT OR IGNORE INTO program_coordinators (program_id, member_id, role_title)
         VALUES (?, ?, ?)
       `);
       ids.forEach(mId => {
-        if (mId) insertCoord.run(programId, Number(mId), 'Coordinator');
+        if (mId) insertCoord.run(effectiveId, Number(mId), 'Coordinator');
       });
     }
 
-    const updated = db.prepare('SELECT * FROM programs WHERE id = ?').get(programId);
+    const updated = db.prepare('SELECT * FROM programs WHERE id = ?').get(effectiveId);
 
     logActivity(req, {
       department: 'Programs & Events',
@@ -456,13 +460,17 @@ router.put('/:id', requireAuth, upload.single('poster'), (req, res) => {
 router.delete('/:id', requireAuth, (req, res) => {
   try {
     const programId = Number(req.params.id);
-    const existing = db.prepare('SELECT name, program_code FROM programs WHERE id = ?').get(programId);
+    let existing = db.prepare('SELECT id, name, program_code FROM programs WHERE id = ?').get(programId);
+    if (!existing && req.query && req.query.program_code) {
+      existing = db.prepare('SELECT id, name, program_code FROM programs WHERE program_code = ?').get(req.query.program_code.trim());
+    }
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Program not found.' });
     }
+    const effectiveId = existing.id;
 
     // Delete program (cascades to program_coordinators, photos, videos, documents, social_media_posts, and sets null on transactions/sponsors)
-    db.prepare('DELETE FROM programs WHERE id = ?').run(programId);
+    db.prepare('DELETE FROM programs WHERE id = ?').run(effectiveId);
 
     logActivity(req, {
       department: 'Programs & Events',

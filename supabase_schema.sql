@@ -433,6 +433,11 @@ INSERT INTO club_members (college_id, full_name, email, phone, year, branch, sec
 VALUES ('254G1A05AY', 'venkata sai nihas P', '254g1a05ay@gmail.com', '9492655062', '2nd Year', 'Computer Science & Engineering (CSE-F)', 'CSE-F', 'Club Member', NULL, 'Active', 'Section: CSE-F')
 ON CONFLICT (college_id) DO NOTHING;
 
+-- Seed existing programs
+INSERT INTO programs (program_code, name, program_date, start_time, end_time, venue, program_type, description, participants_count, status, is_demo, created_by)
+VALUES ('STIC-2026-001', 'SUSTAINATHON', '2026-09-22', '10:30 AM', '04:30 PM', 'B - block seminar hall', 'Hackathon', 'STIC Sustainability & Circular Economy Hackathon', 40, 'Completed', 0, 'HOD')
+ON CONFLICT (program_code) DO NOTHING;
+
 -- =========================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- Enable public access for read & write so STIC portal works seamlessly

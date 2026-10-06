@@ -182,30 +182,30 @@ export default function HodWelcomeTransition({ onComplete }) {
           <span>CSE Department</span>
         </div>
 
-        {/* Popping Salute Image */}
+        {/* Popping Salute Emoji (100% Transparent, No White Box) */}
         <div
           style={{
             position: 'relative',
-            marginBottom: '26px',
+            marginBottom: '22px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}
         >
-          {/* Subtle Golden Glow Halo behind Salute Icon */}
+          {/* Soft Warm Radial Glow */}
           <div
             style={{
               position: 'absolute',
-              width: '180px',
-              height: '180px',
+              width: '160px',
+              height: '160px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, rgba(255, 255, 255, 0) 70%)',
-              filter: 'blur(16px)',
+              background: 'radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, rgba(255, 255, 255, 0) 70%)',
+              filter: 'blur(12px)',
               pointerEvents: 'none'
             }}
           />
 
-          {/* Popping Salute Image Container */}
+          {/* Popping Salute Emoji Container */}
           <div
             style={{
               animation: 'hodSalutePop 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s both',
@@ -217,23 +217,42 @@ export default function HodWelcomeTransition({ onComplete }) {
             <div
               style={{
                 animation: 'hodFloatGentle 3s ease-in-out 1s infinite',
-                width: '190px',
-                height: '190px',
+                width: '150px',
+                height: '150px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                background: 'transparent'
               }}
             >
               <img
                 src="/hod_salute.png"
-                alt="Salute HOD"
+                alt="🫡"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextSibling) {
+                    e.currentTarget.nextSibling.style.display = 'block';
+                  }
+                }}
                 style={{
                   width: '100%',
                   height: '100%',
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 14px 28px rgba(217, 119, 6, 0.3))'
+                  background: 'transparent',
+                  filter: 'drop-shadow(0 12px 24px rgba(217, 119, 6, 0.28))'
                 }}
               />
+              <span
+                style={{
+                  display: 'none',
+                  fontSize: '110px',
+                  lineHeight: 1,
+                  userSelect: 'none',
+                  filter: 'drop-shadow(0 12px 24px rgba(217, 119, 6, 0.28))'
+                }}
+              >
+                🫡
+              </span>
             </div>
           </div>
         </div>
@@ -241,16 +260,17 @@ export default function HodWelcomeTransition({ onComplete }) {
         {/* Popping Title: "Welcome back, Head of the Department" */}
         <h1
           style={{
-            margin: '0 0 14px 0',
-            fontSize: 'clamp(1.75rem, 4.2vw, 2.75rem)',
+            margin: '0 0 16px 0',
+            fontSize: 'clamp(1.4rem, 3.4vw, 2.3rem)',
             fontWeight: 900,
             color: '#0f172a',
             letterSpacing: '-0.025em',
-            lineHeight: 1.2,
+            lineHeight: 1.25,
             display: 'flex',
             flexWrap: 'wrap',
             justifyContent: 'center',
-            gap: '0.22em'
+            gap: '0.24em',
+            maxWidth: '920px'
           }}
         >
           {titleText.split(' ').map((word, wordIdx) => {
@@ -259,6 +279,7 @@ export default function HodWelcomeTransition({ onComplete }) {
                 key={wordIdx}
                 style={{
                   display: 'inline-flex',
+                  whiteSpace: 'nowrap',
                   overflow: 'visible'
                 }}
               >
@@ -286,20 +307,26 @@ export default function HodWelcomeTransition({ onComplete }) {
         {/* Popping Subtitle: "Privilege to have you" (Smaller Size) */}
         <div
           style={{
-            fontSize: 'clamp(1.05rem, 2.3vw, 1.35rem)',
+            fontSize: 'clamp(0.95rem, 2vw, 1.2rem)',
             fontWeight: 700,
-            color: '#475569',
+            color: '#64748b',
             letterSpacing: '0.01em',
-            margin: '0 0 32px 0',
+            margin: '0 0 28px 0',
             display: 'flex',
             flexWrap: 'wrap',
             justifyContent: 'center',
-            gap: '0.25em'
+            gap: '0.28em'
           }}
         >
           {subtitleText.split(' ').map((word, wordIdx) => {
             return (
-              <span key={wordIdx} style={{ display: 'inline-flex' }}>
+              <span
+                key={wordIdx}
+                style={{
+                  display: 'inline-flex',
+                  whiteSpace: 'nowrap'
+                }}
+              >
                 {word.split('').map((char, charIdx) => {
                   const delay = 0.95 + (wordIdx * 6 + charIdx) * 0.035;
                   return (

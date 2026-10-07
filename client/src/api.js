@@ -1179,6 +1179,33 @@ async function handleSupabaseRequest(endpoint, options = {}) {
         };
       });
 
+      let totalCollected = 0;
+      let totalSpent = 580;
+      let currentBalance = -580;
+
+      try {
+        const { data: txns } = await sb.from('transactions').select('type, amount');
+        if (txns && txns.length > 0) {
+          totalCollected = 0;
+          totalSpent = 0;
+          txns.forEach(t => {
+            const amt = Number(t.amount || 0);
+            if (t.type === 'Income') totalCollected += amt;
+            else if (t.type === 'Expense') totalSpent += amt;
+          });
+          currentBalance = totalCollected - totalSpent;
+        } else {
+          const finRes = await fetch(`${API_BASE}/finance/overview`).then(r => r.json()).catch(() => null);
+          if (finRes?.data?.allTime) {
+            totalCollected = Number(finRes.data.allTime.totalIncome || 0);
+            totalSpent = Number(finRes.data.allTime.totalExpense || 0);
+            currentBalance = Number(finRes.data.allTime.netBalance || 0);
+          }
+        }
+      } catch (fErr) {
+        // default fallback
+      }
+
       return {
         success: true,
         data: {
@@ -1191,9 +1218,9 @@ async function handleSupabaseRequest(endpoint, options = {}) {
             completedPrograms: completedPrograms || 8,
             ongoingPrograms: 1,
             plannedPrograms: Math.max((totalPrograms || 0) - (completedPrograms || 0), 1),
-            totalCollected: 245000,
-            totalSpent: 112000,
-            currentBalance: 133000,
+            totalCollected,
+            totalSpent,
+            currentBalance,
             totalSponsorsCount: 6,
             totalSponsorshipSum: 150000,
             programsThisYear: totalPrograms || 14,
@@ -1366,9 +1393,9 @@ function getStaticMockData(endpoint, options = {}) {
           completedPrograms: 8,
           ongoingPrograms: 1,
           plannedPrograms: 1,
-          totalCollected: 245000,
-          totalSpent: 112000,
-          currentBalance: 133000,
+          totalCollected: 0,
+          totalSpent: 580,
+          currentBalance: -580,
           totalSponsorsCount: 6,
           totalSponsorshipSum: 150000,
           programsThisYear: 14,

@@ -257,6 +257,11 @@ export default function ProgramDetailView({ programId, onBack, showToast, allMem
       showToast('error', 'Select Member', 'Please select a club member.');
       return;
     }
+    if ((program.coordinators || []).length >= 5) {
+      showToast('error', 'Limit Reached', 'Maximum 5 coordinators allowed for this event.');
+      setIsAddCoordOpen(false);
+      return;
+    }
     try {
       await api.addCoordinator(programId, {
         member_id: coordMemberId,
@@ -784,9 +789,18 @@ export default function ProgramDetailView({ programId, onBack, showToast, allMem
       {activeTab === 'team' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }} className="no-print">
-            <h3 style={{ fontSize: '1.15rem' }}>Organizing Committee & Coordinators</h3>
-            <button className="btn btn-primary btn-sm" onClick={() => setIsAddCoordOpen(true)}>
-              <Plus size={15} /> + Appoint Coordinator
+            <h3 style={{ fontSize: '1.15rem' }}>Organizing Committee &amp; Coordinators ({(program.coordinators || []).length}/5)</h3>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                if ((program.coordinators || []).length >= 5) {
+                  showToast('error', 'Coordinator Limit Reached', 'Maximum 5 coordinators allowed per event.');
+                  return;
+                }
+                setIsAddCoordOpen(true);
+              }}
+            >
+              <Plus size={15} /> + Appoint Coordinator ({ (program.coordinators || []).length }/5)
             </button>
           </div>
 
@@ -1150,7 +1164,12 @@ export default function ProgramDetailView({ programId, onBack, showToast, allMem
             <form onSubmit={handleAddCoordinator}>
               <div className="modal-body">
                 <div className="form-group" style={{ marginBottom: '14px' }}>
-                  <label className="form-label">Select Club Member *</label>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Select Club Member *</span>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--primary-light)', fontWeight: 600 }}>
+                      Current: {(program.coordinators || []).length} / 5
+                    </span>
+                  </label>
                   <select
                     className="form-select"
                     required
@@ -1165,6 +1184,61 @@ export default function ProgramDetailView({ programId, onBack, showToast, allMem
                     ))}
                   </select>
                 </div>
+
+                {/* Automatic DP & Profile Details Preview */}
+                {coordMemberId && (() => {
+                  const m = (allMembers || []).find(mem => Number(mem.id) === Number(coordMemberId));
+                  if (!m) return null;
+                  return (
+                    <div style={{
+                      background: 'var(--bg-surface-elevated, #1a2a44)',
+                      border: '1.5px solid var(--primary-light)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '12px 14px',
+                      marginBottom: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <div style={{
+                        width: '52px',
+                        height: '52px',
+                        minWidth: '52px',
+                        minHeight: '52px',
+                        aspectRatio: '1 / 1',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '2px solid var(--primary-light)',
+                        background: 'var(--primary-soft)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 800,
+                        fontSize: '1.2rem',
+                        color: 'var(--primary-light)',
+                        flexShrink: 0
+                      }}>
+                        {m.profile_photo ? (
+                          <img src={m.profile_photo} alt={m.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          (m.full_name || 'C').charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {m.full_name}
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--primary-light)', fontWeight: 600 }}>
+                          {m.college_id} · {m.department_name || 'No Dept'}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-subtle)', marginTop: '2px' }}>
+                          {m.year} {m.branch ? `(${m.branch})` : ''} {m.phone ? `· ${m.phone}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="form-group">
                   <label className="form-label">Coordinator Role Title</label>
                   <input

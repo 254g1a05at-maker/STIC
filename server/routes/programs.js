@@ -93,10 +93,14 @@ router.get('/', requireAuth, (req, res) => {
         m.college_id,
         m.email,
         m.phone,
+        m.year,
+        m.branch,
         m.profile_photo,
+        d.name as department_name,
         pc.role_title
       FROM program_coordinators pc
       JOIN club_members m ON pc.member_id = m.id
+      LEFT JOIN departments d ON m.department_id = d.id
       WHERE pc.program_id = ?
     `);
 
@@ -144,9 +148,11 @@ router.get('/:id', requireAuth, (req, res) => {
         m.year,
         m.branch,
         m.profile_photo,
+        d.name as department_name,
         pc.role_title
       FROM program_coordinators pc
       JOIN club_members m ON pc.member_id = m.id
+      LEFT JOIN departments d ON m.department_id = d.id
       WHERE pc.program_id = ?
       ORDER BY m.full_name ASC
     `).all(programId);
@@ -293,7 +299,7 @@ router.post('/', requireAuth, upload.single('poster'), (req, res) => {
         INSERT OR IGNORE INTO program_coordinators (program_id, member_id, role_title)
         VALUES (?, ?, ?)
       `);
-      ids.forEach(mId => {
+      ids.slice(0, 5).forEach(mId => {
         if (mId) insertCoord.run(programId, Number(mId), coordinator_role || 'Coordinator');
       });
     }
@@ -416,7 +422,7 @@ router.put('/:id', requireAuth, upload.single('poster'), (req, res) => {
         INSERT OR IGNORE INTO program_coordinators (program_id, member_id, role_title)
         VALUES (?, ?, ?)
       `);
-      ids.forEach(mId => {
+      ids.slice(0, 5).forEach(mId => {
         if (mId) insertCoord.run(effectiveId, Number(mId), 'Coordinator');
       });
     }
@@ -502,6 +508,15 @@ router.post('/:id/coordinators', requireAuth, (req, res) => {
 
     if (!member_id) {
       return res.status(400).json({ success: false, message: 'Member ID is required.' });
+    }
+
+    const currentCount = db.prepare('SELECT COUNT(*) as count FROM program_coordinators WHERE program_id = ?').get(programId)?.count || 0;
+    const isAlreadyCoord = db.prepare('SELECT id FROM program_coordinators WHERE program_id = ? AND member_id = ?').get(programId, Number(member_id));
+    if (!isAlreadyCoord && currentCount >= 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Coordinator limit reached: Maximum 5 coordinators allowed per program.'
+      });
     }
 
     const member = db.prepare('SELECT full_name FROM club_members WHERE id = ?').get(Number(member_id));

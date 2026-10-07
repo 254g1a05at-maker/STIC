@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { authState } from '../api';
+import React, { useState, useEffect } from 'react';
+import { authState, api } from '../api';
 import {
   Users,
   Building2,
@@ -317,6 +317,21 @@ export default function DashboardView({
   const [eventSummaryInput, setEventSummaryInput] = useState('');
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [evalError, setEvalError] = useState('');
+  const [liveFinance, setLiveFinance] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getFinanceOverview()
+      .then(res => {
+        if (isMounted && res?.data?.allTime) {
+          setLiveFinance(res.data);
+        }
+      })
+      .catch(err => {
+        console.warn('Dashboard finance sync warning:', err);
+      });
+    return () => { isMounted = false; };
+  }, [stats]);
 
   if (loading || !stats) {
     return (
@@ -345,9 +360,15 @@ export default function DashboardView({
     return '₹' + Number(val || 0).toLocaleString('en-IN');
   };
 
-  const totalInflow = Number(summary.totalCollected || 0);
-  const totalOutflow = Number(summary.totalSpent || 0);
-  const netBalance = Number(summary.currentBalance || 0);
+  const totalInflow = liveFinance?.allTime?.totalIncome !== undefined
+    ? Number(liveFinance.allTime.totalIncome)
+    : Number(summary?.totalCollected || 0);
+  const totalOutflow = liveFinance?.allTime?.totalExpense !== undefined
+    ? Number(liveFinance.allTime.totalExpense)
+    : Number(summary?.totalSpent || 0);
+  const netBalance = liveFinance?.allTime?.netBalance !== undefined
+    ? Number(liveFinance.allTime.netBalance)
+    : Number(summary?.currentBalance || 0);
   const utilizationPct = totalInflow > 0 ? Math.min(100, Math.round((totalOutflow / totalInflow) * 100)) : 0;
   const reservePct = Math.max(0, 100 - utilizationPct);
 
@@ -403,7 +424,7 @@ export default function DashboardView({
     labels: ['Money Spent (Outflow)', 'Current Balance (Reserve)'],
     datasets: [
       {
-        data: [summary.totalSpent, Math.max(0, summary.currentBalance)],
+        data: [totalOutflow, Math.max(0, netBalance)],
         backgroundColor: ['rgba(244, 63, 94, 0.85)', 'rgba(16, 185, 129, 0.9)'],
         borderColor: ['rgba(148, 163, 184, 0.25)', 'rgba(148, 163, 184, 0.25)'],
         borderWidth: 2,
@@ -611,7 +632,7 @@ export default function DashboardView({
             </div>
 
             <div style={{ fontSize: '1.95rem', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', margin: '4px 0 10px 0' }}>
-              {formatINR(summary.totalCollected)}
+              {formatINR(totalInflow)}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
@@ -642,7 +663,7 @@ export default function DashboardView({
             </div>
 
             <div style={{ fontSize: '1.95rem', fontWeight: 800, color: '#fb7185', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', margin: '4px 0 10px 0' }}>
-              {formatINR(summary.totalSpent)}
+              {formatINR(totalOutflow)}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
@@ -676,13 +697,13 @@ export default function DashboardView({
               style={{
                 fontSize: '1.95rem',
                 fontWeight: 800,
-                color: summary.currentBalance >= 0 ? '#34d399' : '#fb7185',
+                color: netBalance >= 0 ? '#34d399' : '#fb7185',
                 fontFamily: 'var(--font-display)',
                 letterSpacing: '-0.02em',
                 margin: '4px 0 10px 0'
               }}
             >
-              {formatINR(summary.currentBalance)}
+              {formatINR(netBalance)}
             </div>
 
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
@@ -848,7 +869,7 @@ export default function DashboardView({
                   Total Inflow
                 </div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-display)', marginTop: '2px' }}>
-                  {formatINR(summary.totalCollected)}
+                  {formatINR(totalInflow)}
                 </div>
               </div>
             </div>

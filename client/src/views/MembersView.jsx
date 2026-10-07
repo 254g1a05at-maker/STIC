@@ -21,7 +21,9 @@ import {
   Sparkles,
   Camera,
   Image,
-  UserMinus
+  UserMinus,
+  GripVertical,
+  RotateCcw
 } from 'lucide-react';
 import { api, authState } from '../api';
 
@@ -328,12 +330,163 @@ export const DEFAULT_DEPARTMENTS = [
   { id: 6, name: 'Project & Innovation' }
 ];
 
-export default function MembersView({ departments, showToast, openAddTrigger, onCloseAddTrigger }) {
+export default function MembersView({ departments, showToast, openAddTrigger, onCloseAddTrigger, isAllMembersDirectory = false }) {
   const user = authState.getUser();
   const canManageMembers = !user?.is_website_handler || Boolean(user?.permissions?.manage_members);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
+
+  // Custom drag order states (persisted in localStorage)
+  const [repOrder, setRepOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('stic_representatives_order');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [clubMemberOrder, setClubMemberOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('stic_club_members_order');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [draggedRepId, setDraggedRepId] = useState(null);
+  const [dragOverRepId, setDragOverRepId] = useState(null);
+
+  const [draggedMemberId, setDraggedMemberId] = useState(null);
+  const [dragOverMemberId, setDragOverMemberId] = useState(null);
+
+  const sortByDefaultRank = (a, b) => {
+    const rankA = getRoleRank(a.position);
+    const rankB = getRoleRank(b.position);
+    if (rankA !== rankB) return rankA - rankB;
+    return a.id - b.id;
+  };
+
+  const getOrderedList = (items, orderIds) => {
+    if (!orderIds || orderIds.length === 0) return items;
+    const ordered = [];
+    const remaining = [];
+    const map = new Map(items.map(m => [Number(m.id), m]));
+    orderIds.forEach(id => {
+      const item = map.get(Number(id));
+      if (item) {
+        ordered.push(item);
+        map.delete(Number(id));
+      }
+    });
+    map.forEach(item => remaining.push(item));
+    remaining.sort(sortByDefaultRank);
+    return [...ordered, ...remaining];
+  };
+
+  const handleRepDragStart = (e, id) => {
+    setDraggedRepId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', String(id));
+    } catch (err) {}
+  };
+
+  const handleRepDragOver = (e, id) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverRepId !== id) {
+      setDragOverRepId(id);
+    }
+  };
+
+  const handleRepDrop = (e, targetId, currentReps) => {
+    e.preventDefault();
+    if (!draggedRepId || Number(draggedRepId) === Number(targetId)) {
+      setDraggedRepId(null);
+      setDragOverRepId(null);
+      return;
+    }
+
+    const currentList = [...currentReps];
+    const fromIndex = currentList.findIndex(m => Number(m.id) === Number(draggedRepId));
+    const toIndex = currentList.findIndex(m => Number(m.id) === Number(targetId));
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const [movedItem] = currentList.splice(fromIndex, 1);
+      currentList.splice(toIndex, 0, movedItem);
+      const newOrder = currentList.map(m => Number(m.id));
+      setRepOrder(newOrder);
+      localStorage.setItem('stic_representatives_order', JSON.stringify(newOrder));
+      if (showToast) {
+        showToast('success', 'Order Saved', 'Representative card order rearranged successfully.');
+      }
+    }
+
+    setDraggedRepId(null);
+    setDragOverRepId(null);
+  };
+
+  const handleResetRepOrder = () => {
+    localStorage.removeItem('stic_representatives_order');
+    setRepOrder([]);
+    if (showToast) {
+      showToast('info', 'Order Reset', 'Representatives restored to official leadership hierarchy.');
+    }
+  };
+
+  const handleMemberDragStart = (e, id) => {
+    setDraggedMemberId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', String(id));
+    } catch (err) {}
+  };
+
+  const handleMemberDragOver = (e, id) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverMemberId !== id) {
+      setDragOverMemberId(id);
+    }
+  };
+
+  const handleMemberDrop = (e, targetId, currentMembers) => {
+    e.preventDefault();
+    if (!draggedMemberId || Number(draggedMemberId) === Number(targetId)) {
+      setDraggedMemberId(null);
+      setDragOverMemberId(null);
+      return;
+    }
+
+    const currentList = [...currentMembers];
+    const fromIndex = currentList.findIndex(m => Number(m.id) === Number(draggedMemberId));
+    const toIndex = currentList.findIndex(m => Number(m.id) === Number(targetId));
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const [movedItem] = currentList.splice(fromIndex, 1);
+      currentList.splice(toIndex, 0, movedItem);
+      const newOrder = currentList.map(m => Number(m.id));
+      setClubMemberOrder(newOrder);
+      localStorage.setItem('stic_club_members_order', JSON.stringify(newOrder));
+      if (showToast) {
+        showToast('success', 'Order Saved', 'Members directory order rearranged successfully.');
+      }
+    }
+
+    setDraggedMemberId(null);
+    setDragOverMemberId(null);
+  };
+
+  const handleResetMemberOrder = () => {
+    localStorage.removeItem('stic_club_members_order');
+    setClubMemberOrder([]);
+    if (showToast) {
+      showToast('info', 'Order Reset', 'Members directory restored to default order.');
+    }
+  };
 
   const activeDepartments = (departments && departments.length > 0)
     ? (
@@ -553,10 +706,12 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
         <div className="page-title-wrap">
           <h1>
             <Users size={26} color="var(--primary-light)" />
-            Club Members Management
+            {isAllMembersDirectory ? 'All Members Directory' : 'Club Members Management'}
           </h1>
           <p>
-            Master registry of all active and past STIC collegiate innovators ({members.length} records)
+            {isAllMembersDirectory
+              ? `Unified directory of all club leadership and student members (${members.length} records) · Drag & drop boxes to customize order`
+              : `Master registry of all active and past STIC collegiate innovators (${members.length} records) · Drag & drop boxes to customize order`}
           </p>
         </div>
 
@@ -724,8 +879,11 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
           return null;
         };
 
-        const representatives = sortedMembers.filter(m => isRepresentativeRole(m.position));
-        const clubMembersList = sortedMembers.filter(m => !isRepresentativeRole(m.position));
+        const rawRepresentatives = sortedMembers.filter(m => isRepresentativeRole(m.position));
+        const rawClubMembersList = sortedMembers.filter(m => !isRepresentativeRole(m.position));
+
+        const representatives = getOrderedList(rawRepresentatives, repOrder);
+        const clubMembersList = getOrderedList(rawClubMembersList, clubMemberOrder);
 
         const sectionTabs = ['CSE-A', 'CSE-B', 'CSE-C', 'CSE-D', 'CSE-E', 'CSE-F'];
         const sectionCounts = {};
@@ -759,11 +917,25 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
                       Club Representatives
                     </h2>
                     <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-                      Executive Council & Leadership Team ({representatives.length} Representatives)
+                      Executive Council & Leadership Team ({representatives.length} Representatives) · Drag cards to reorder
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span className="badge badge-info" style={{ fontWeight: 600, fontSize: '0.72rem', padding: '4px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <GripVertical size={13} /> Drag to Reorder
+                  </span>
+                  {repOrder && repOrder.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={handleResetRepOrder}
+                      style={{ fontSize: '0.72rem', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title="Reset to default leadership hierarchy"
+                    >
+                      <RotateCcw size={12} /> Reset Order
+                    </button>
+                  )}
                   <span className="badge badge-success" style={{ fontWeight: 700, padding: '5px 12px' }}>
                     {representatives.length} Representatives
                   </span>
@@ -795,10 +967,51 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
                 </div>
               ) : viewMode === 'grid' ? (
                 <div className="members-grid">
-                  {representatives.map((m) => {
+                  {representatives.map((m, index) => {
                     const roleInfo = getRoleDetails(m.position);
+                    const isDragging = Number(draggedRepId) === Number(m.id);
+                    const isDragOver = Number(dragOverRepId) === Number(m.id);
                     return (
-                      <div key={m.id} className="member-card" style={{ borderColor: 'rgba(16, 185, 129, 0.35)', background: 'var(--bg-surface)' }}>
+                      <div
+                        key={m.id}
+                        className="member-card"
+                        draggable={true}
+                        onDragStart={(e) => handleRepDragStart(e, m.id)}
+                        onDragOver={(e) => handleRepDragOver(e, m.id)}
+                        onDrop={(e) => handleRepDrop(e, m.id, representatives)}
+                        onDragEnd={() => { setDraggedRepId(null); setDragOverRepId(null); }}
+                        style={{
+                          borderColor: isDragOver ? 'var(--primary-light)' : 'rgba(16, 185, 129, 0.35)',
+                          background: isDragOver ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-surface)',
+                          opacity: isDragging ? 0.45 : 1,
+                          transform: isDragOver ? 'scale(1.02)' : 'none',
+                          boxShadow: isDragOver ? '0 0 20px rgba(16, 185, 129, 0.45)' : undefined,
+                          transition: 'all 0.18s ease',
+                          cursor: 'grab'
+                        }}
+                      >
+                        {/* Drag Handle Bar */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '4px 8px',
+                            marginBottom: '10px',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            borderRadius: '6px',
+                            border: '1px dashed rgba(16, 185, 129, 0.25)',
+                            cursor: 'grab'
+                          }}
+                          title="Click and drag to rearrange representative position"
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: 'var(--primary-light)', fontWeight: 600 }}>
+                            <GripVertical size={13} /> Drag to Reorder
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-subtle)', fontFamily: 'monospace', fontWeight: 600 }}>
+                            Position #{index + 1}
+                          </span>
+                        </div>
                         <div className="member-avatar" style={{ width: '140px', height: '140px', minWidth: '140px', minHeight: '140px', aspectRatio: '1 / 1', borderRadius: '50%', border: '4px solid var(--primary-light)', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)', overflow: 'hidden', margin: '0 auto 16px', flexShrink: 0 }}>
                           {m.profile_photo ? (
                             <img src={m.profile_photo} alt={m.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
@@ -1027,7 +1240,21 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span className="badge badge-info" style={{ fontWeight: 600, fontSize: '0.72rem', padding: '4px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <GripVertical size={13} /> Drag to Reorder
+                  </span>
+                  {clubMemberOrder && clubMemberOrder.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={handleResetMemberOrder}
+                      style={{ fontSize: '0.72rem', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title="Reset to default alphabetical / numerical order"
+                    >
+                      <RotateCcw size={12} /> Reset Order
+                    </button>
+                  )}
                   {selectedSection && (
                     <span className="badge badge-info" style={{ fontWeight: 700, padding: '4px 10px' }}>
                       Filtering: {selectedSection}
@@ -1122,11 +1349,52 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
                 </div>
               ) : viewMode === 'grid' ? (
                 <div className="members-grid">
-                  {clubMembersList.map((m) => {
+                  {clubMembersList.map((m, index) => {
                     const sec = getMemberSection(m);
+                    const isDragging = Number(draggedMemberId) === Number(m.id);
+                    const isDragOver = Number(dragOverMemberId) === Number(m.id);
                     return (
-                      <div key={m.id} className="member-card">
-                        <div className="member-name" style={{ marginTop: '8px', marginBottom: '4px' }} title={m.full_name}>{m.full_name}</div>
+                      <div
+                        key={m.id}
+                        className="member-card"
+                        draggable={true}
+                        onDragStart={(e) => handleMemberDragStart(e, m.id)}
+                        onDragOver={(e) => handleMemberDragOver(e, m.id)}
+                        onDrop={(e) => handleMemberDrop(e, m.id, clubMembersList)}
+                        onDragEnd={() => { setDraggedMemberId(null); setDragOverMemberId(null); }}
+                        style={{
+                          borderColor: isDragOver ? 'var(--primary-light)' : undefined,
+                          background: isDragOver ? 'rgba(56, 189, 248, 0.08)' : undefined,
+                          opacity: isDragging ? 0.45 : 1,
+                          transform: isDragOver ? 'scale(1.02)' : 'none',
+                          boxShadow: isDragOver ? '0 0 18px rgba(56, 189, 248, 0.35)' : undefined,
+                          transition: 'all 0.18s ease',
+                          cursor: 'grab'
+                        }}
+                      >
+                        {/* Drag Handle Bar */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '3px 6px',
+                            marginBottom: '6px',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            borderRadius: '4px',
+                            border: '1px dashed var(--border-subtle)',
+                            cursor: 'grab'
+                          }}
+                          title="Click and drag to rearrange member position"
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: 'var(--text-subtle)', fontWeight: 600 }}>
+                            <GripVertical size={12} /> Drag to Reorder
+                          </span>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-subtle)', fontFamily: 'monospace' }}>
+                            #{index + 1}
+                          </span>
+                        </div>
+                        <div className="member-name" style={{ marginTop: '4px', marginBottom: '4px' }} title={m.full_name}>{m.full_name}</div>
                         <div className="member-position" style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--primary-light)', margin: '0 0 6px' }}>{m.position}</div>
                         <div className="member-college-id">{m.college_id}</div>
 

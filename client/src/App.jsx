@@ -205,14 +205,26 @@ export default function App() {
   const loadInitialData = async () => {
     try {
       setStatsLoading(true);
-      const [statsRes, memRes, progRes, settRes] = await Promise.all([
+      const [statsRes, memRes, progRes, settRes, finRes] = await Promise.all([
         api.getDashboardStats().catch(() => ({ data: null })),
         api.getMembers().catch(() => ({ data: [] })),
         api.getPrograms().catch(() => ({ data: [] })),
-        api.getSettings().catch(() => ({ data: null }))
+        api.getSettings().catch(() => ({ data: null })),
+        api.getFinanceOverview().catch(() => ({ data: null }))
       ]);
 
-      if (statsRes.data) setStats(statsRes.data);
+      if (statsRes.data) {
+        const finalStats = { ...statsRes.data };
+        if (finRes?.data?.allTime) {
+          finalStats.summary = {
+            ...finalStats.summary,
+            totalCollected: Number(finRes.data.allTime.totalIncome || 0),
+            totalSpent: Number(finRes.data.allTime.totalExpense || 0),
+            currentBalance: Number(finRes.data.allTime.netBalance || 0)
+          };
+        }
+        setStats(finalStats);
+      }
       if (memRes.data) setAllMembers(memRes.data);
       if (progRes.data) setAllPrograms(progRes.data);
       if (settRes.data?.demo_stats) setDemoStats(settRes.data.demo_stats);
@@ -343,6 +355,7 @@ export default function App() {
               showToast={showToast}
               openAddTrigger={quickActionType === 'member'}
               onCloseAddTrigger={() => setQuickActionType(null)}
+              isAllMembersDirectory={currentView === 'all-members'}
             />
           )}
 

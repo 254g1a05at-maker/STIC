@@ -80,6 +80,15 @@ export default function ProgramsView({
   });
 
   const handleSelectCoordinatorMember = (memberId) => {
+    if ((formData?.coordinator_ids || []).length >= 5) {
+      if (showToast) {
+        showToast('error', 'Coordinator Limit Reached', 'You can select up to 5 coordinators for an event.');
+      } else {
+        alert('You can select a maximum of 5 coordinators for each event.');
+      }
+      setShowCoordDropdown(false);
+      return;
+    }
     if (!formData.coordinator_ids.some(id => Number(id) === Number(memberId))) {
       setFormData(prev => ({
         ...prev,
@@ -556,9 +565,9 @@ export default function ProgramsView({
 
                   <div className="form-group form-full" style={{ position: 'relative' }}>
                     <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Assign Coordinators from Club Members</span>
-                      <span style={{ fontSize: '0.74rem', color: 'var(--primary-light)', fontWeight: 600 }}>
-                        {formData.coordinator_ids.length} Finalized
+                      <span>Assign Event Coordinators (Up to 5)</span>
+                      <span style={{ fontSize: '0.74rem', color: formData.coordinator_ids.length >= 5 ? '#fb7185' : 'var(--primary-light)', fontWeight: 700 }}>
+                        {formData.coordinator_ids.length} / 5 Selected {formData.coordinator_ids.length >= 5 ? '(Maximum Reached)' : ''}
                       </span>
                     </label>
 
@@ -566,61 +575,80 @@ export default function ProgramsView({
                     <div style={{
                       display: 'flex',
                       flexWrap: 'wrap',
-                      gap: '6px',
-                      marginBottom: formData.coordinator_ids.length > 0 ? '8px' : '0'
+                      gap: '8px',
+                      marginBottom: formData.coordinator_ids.length > 0 ? '10px' : '0'
                     }}>
                       {formData.coordinator_ids.map((id) => {
                         const m = (allMembers || []).find(mem => Number(mem.id) === Number(id));
                         if (!m) return null;
                         return (
-                          <span
+                          <div
                             key={id}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '6px',
-                              padding: '5px 10px',
-                              borderRadius: '20px',
-                              background: 'var(--primary-soft)',
-                              border: '1px solid rgba(16, 185, 129, 0.35)',
-                              color: 'var(--text-main)',
-                              fontSize: '0.82rem',
-                              fontWeight: 600
+                              gap: '8px',
+                              padding: '5px 12px 5px 6px',
+                              borderRadius: '24px',
+                              background: 'var(--bg-surface-elevated, #1a2a44)',
+                              border: '1.5px solid var(--primary-light)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
                             }}
                           >
-                            <span style={{
-                              width: '20px',
-                              height: '20px',
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              minWidth: '32px',
+                              minHeight: '32px',
+                              aspectRatio: '1 / 1',
                               borderRadius: '50%',
-                              background: 'var(--primary)',
-                              color: '#fff',
-                              fontSize: '0.68rem',
+                              overflow: 'hidden',
+                              border: '2px solid var(--primary)',
+                              background: 'var(--primary-soft)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontWeight: 700
+                              color: 'var(--primary-light)',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              flexShrink: 0
                             }}>
-                              {m.full_name ? m.full_name.charAt(0).toUpperCase() : 'M'}
-                            </span>
-                            {m.full_name} <span style={{ color: 'var(--text-subtle)', fontSize: '0.74rem' }}>({m.college_id})</span>
+                              {m.profile_photo ? (
+                                <img src={m.profile_photo} alt={m.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                (m.full_name || 'C').charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.2 }}>
+                                {m.full_name}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', lineHeight: 1.2 }}>
+                                {m.college_id} {m.department_name ? `· ${m.department_name}` : ''} {m.year ? `· ${m.year}` : ''}
+                              </span>
+                            </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveCoordinatorTag(id)}
                               style={{
-                                background: 'none',
+                                background: 'rgba(244, 63, 94, 0.15)',
                                 border: 'none',
-                                color: '#fb7185',
-                                cursor: 'pointer',
-                                padding: 0,
+                                borderRadius: '50%',
+                                width: '22px',
+                                height: '22px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                marginLeft: '4px'
+                                justifyContent: 'center',
+                                color: '#fb7185',
+                                cursor: 'pointer',
+                                marginLeft: '4px',
+                                padding: 0
                               }}
                               title="Remove Coordinator"
                             >
-                              <X size={14} />
+                              <X size={13} />
                             </button>
-                          </span>
+                          </div>
                         );
                       })}
                     </div>
@@ -632,20 +660,23 @@ export default function ProgramsView({
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="Type member name, college ID, or department to assign & finalize..."
+                          placeholder={formData.coordinator_ids.length >= 5 ? "Maximum 5 coordinators assigned for this event" : "Type member name, college ID, or department to assign (up to 5)..."}
+                          disabled={formData.coordinator_ids.length >= 5}
                           value={coordSearchQuery}
                           onChange={(e) => {
                             setCoordSearchQuery(e.target.value);
                             setShowCoordDropdown(true);
                           }}
-                          onFocus={() => setShowCoordDropdown(true)}
+                          onFocus={() => {
+                            if (formData.coordinator_ids.length < 5) setShowCoordDropdown(true);
+                          }}
                           onKeyDown={handleCoordKeyDown}
                           style={{ paddingLeft: '36px', fontSize: '0.84rem' }}
                         />
                       </div>
 
                       {/* Floating Suggestions Dropdown */}
-                      {showCoordDropdown && coordSearchQuery.trim() !== '' && (
+                      {showCoordDropdown && coordSearchQuery.trim() !== '' && formData.coordinator_ids.length < 5 && (
                         <div
                           style={{
                             position: 'absolute',
@@ -654,7 +685,7 @@ export default function ProgramsView({
                             right: 0,
                             zIndex: 200,
                             marginTop: '4px',
-                            maxHeight: '220px',
+                            maxHeight: '230px',
                             overflowY: 'auto',
                             background: 'var(--bg-surface-elevated, #1a2a44)',
                             border: '1px solid var(--border-subtle)',
@@ -684,30 +715,40 @@ export default function ProgramsView({
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                   <div style={{
-                                    width: '28px',
-                                    height: '28px',
+                                    width: '32px',
+                                    height: '32px',
+                                    minWidth: '32px',
+                                    minHeight: '32px',
+                                    aspectRatio: '1 / 1',
                                     borderRadius: '50%',
+                                    overflow: 'hidden',
                                     background: 'var(--primary-soft)',
+                                    border: '1.5px solid var(--primary-light)',
                                     color: 'var(--primary-light)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     fontWeight: 700,
-                                    fontSize: '0.78rem'
+                                    fontSize: '0.8rem',
+                                    flexShrink: 0
                                   }}>
-                                    {m.full_name ? m.full_name.charAt(0).toUpperCase() : 'M'}
+                                    {m.profile_photo ? (
+                                      <img src={m.profile_photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                      (m.full_name || 'M').charAt(0).toUpperCase()
+                                    )}
                                   </div>
                                   <div>
                                     <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)' }}>
                                       {m.full_name}
                                     </div>
                                     <div style={{ fontSize: '0.74rem', color: 'var(--text-subtle)' }}>
-                                      {m.college_id} · {m.department_name || 'No Dept'}
+                                      {m.college_id} · {m.department_name || 'No Dept'} {m.year ? `· ${m.year}` : ''}
                                     </div>
                                   </div>
                                 </div>
-                                <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '2px 7px' }}>
-                                  + Select
+                                <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '3px 8px' }}>
+                                  + Select ({formData.coordinator_ids.length + 1}/5)
                                 </span>
                               </div>
                             ))
@@ -716,7 +757,7 @@ export default function ProgramsView({
                       )}
                     </div>
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', marginTop: '4px', display: 'block' }}>
-                      Type a person's name or college ID in the search box and press Enter or click to finalize them as a coordinator.
+                      Choose up to 5 coordinators per event. Coordinator DP details and academic information will be automatically attached.
                     </span>
                   </div>
 

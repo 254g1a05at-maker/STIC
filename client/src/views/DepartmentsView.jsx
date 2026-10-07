@@ -33,16 +33,18 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
   const [isEditDeptOpen, setIsEditDeptOpen] = useState(false);
   const [isAssignMemberOpen, setIsAssignMemberOpen] = useState(false);
   const [isChangeLeadOpen, setIsChangeLeadOpen] = useState(false);
-  const [isChangeCoLeadOpen, setIsChangeCoLeadOpen] = useState(false);
+  const [isChangeCoLead1Open, setIsChangeCoLead1Open] = useState(false);
+  const [isChangeCoLead2Open, setIsChangeCoLead2Open] = useState(false);
   const [isCreateDeptOpen, setIsCreateDeptOpen] = useState(false);
   const [activeDept, setActiveDept] = useState(null);
 
   // Form states
-  const [deptForm, setDeptForm] = useState({ name: '', description: '', lead_member_id: '', co_lead_member_id: '', icon: '' });
-  const [newDeptForm, setNewDeptForm] = useState({ name: '', description: '', lead_member_id: '', co_lead_member_id: '', icon: 'Lightbulb' });
+  const [deptForm, setDeptForm] = useState({ name: '', description: '', lead_member_id: '', co_lead_1_member_id: '', co_lead_2_member_id: '', icon: '' });
+  const [newDeptForm, setNewDeptForm] = useState({ name: '', description: '', lead_member_id: '', co_lead_1_member_id: '', co_lead_2_member_id: '', icon: 'Lightbulb' });
   const [assignMemberId, setAssignMemberId] = useState('');
   const [newLeadId, setNewLeadId] = useState('');
-  const [newCoLeadId, setNewCoLeadId] = useState('');
+  const [newCoLead1Id, setNewCoLead1Id] = useState('');
+  const [newCoLead2Id, setNewCoLead2Id] = useState('');
 
   useEffect(() => {
     loadData();
@@ -91,7 +93,8 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
       name: dept.name,
       description: dept.description || '',
       lead_member_id: dept.lead_member_id || '',
-      co_lead_member_id: dept.co_lead_member_id || '',
+      co_lead_1_member_id: dept.co_lead_1_member_id || dept.co_lead_member_id || '',
+      co_lead_2_member_id: dept.co_lead_2_member_id || '',
       icon: dept.icon || ''
     });
     setIsEditDeptOpen(true);
@@ -185,24 +188,45 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
     }
   };
 
-  const openChangeCoLeadModal = (dept) => {
+  const openChangeCoLead1Modal = (dept) => {
     setActiveDept(dept);
-    setNewCoLeadId(dept.co_lead_member_id || '');
-    setIsChangeCoLeadOpen(true);
+    setNewCoLead1Id(dept.co_lead_1_member_id || dept.co_lead_member_id || '');
+    setIsChangeCoLead1Open(true);
   };
 
-  const handleChangeCoLeadSubmit = async (e) => {
+  const handleChangeCoLead1Submit = async (e) => {
     e.preventDefault();
     try {
-      await api.updateDepartment(activeDept.id, { co_lead_member_id: newCoLeadId });
-      showToast('success', 'Co-Lead Assigned', `Department Co-Lead for ${activeDept.name} updated.`);
-      setIsChangeCoLeadOpen(false);
-      loadData();
+      await api.updateDepartment(activeDept.id, { co_lead_1_member_id: newCoLead1Id });
+      showToast('success', 'Co-Lead 1 Assigned', `Department Co-Lead 1 for ${activeDept.name} updated.`);
+      setIsChangeCoLead1Open(false);
+      await loadData();
       if (selectedDeptDetail && selectedDeptDetail.id === activeDept.id) {
         openDepartmentDetails(activeDept);
       }
     } catch (err) {
-      showToast('error', 'Co-Lead Update Failed', err.message);
+      showToast('error', 'Co-Lead 1 Update Failed', err.message);
+    }
+  };
+
+  const openChangeCoLead2Modal = (dept) => {
+    setActiveDept(dept);
+    setNewCoLead2Id(dept.co_lead_2_member_id || '');
+    setIsChangeCoLead2Open(true);
+  };
+
+  const handleChangeCoLead2Submit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.updateDepartment(activeDept.id, { co_lead_2_member_id: newCoLead2Id });
+      showToast('success', 'Co-Lead 2 Assigned', `Department Co-Lead 2 for ${activeDept.name} updated.`);
+      setIsChangeCoLead2Open(false);
+      await loadData();
+      if (selectedDeptDetail && selectedDeptDetail.id === activeDept.id) {
+        openDepartmentDetails(activeDept);
+      }
+    } catch (err) {
+      showToast('error', 'Co-Lead 2 Update Failed', err.message);
     }
   };
 
@@ -273,7 +297,7 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
 
                 {/* Department Leadership & Action Cards */}
                 <div className="card-body">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                     {/* 1. Department Lead Card */}
                     <div style={{
                       background: 'var(--bg-app)',
@@ -287,10 +311,10 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                         <div style={{
-                          width: '60px',
-                          height: '60px',
-                          minWidth: '60px',
-                          minHeight: '60px',
+                          width: '56px',
+                          height: '56px',
+                          minWidth: '56px',
+                          minHeight: '56px',
                           aspectRatio: '1 / 1',
                           borderRadius: '50%',
                           background: 'var(--bg-surface-elevated)',
@@ -316,7 +340,7 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                             </span>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dept.lead_name ? 'var(--primary-light)' : 'var(--text-subtle)' }} />
                           </div>
-                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: dept.lead_name ? 'var(--text-main)' : 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.94rem', color: dept.lead_name ? 'var(--text-main)' : 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {dept.lead_name || 'No Lead Appointed'}
                           </div>
                           <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -329,13 +353,13 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                         className="btn btn-outline btn-sm"
                         onClick={() => openChangeLeadModal(dept)}
                         title="Change Department Lead"
-                        style={{ flexShrink: 0, fontSize: '0.76rem', padding: '6px 10px' }}
+                        style={{ flexShrink: 0, fontSize: '0.74rem', padding: '6px 10px' }}
                       >
                         <UserCheck size={13} /> {dept.lead_name ? 'Change Lead' : 'Assign Lead'}
                       </button>
                     </div>
 
-                    {/* 2. Department Co-Lead Card */}
+                    {/* 2. Department Co-Lead 1 Card */}
                     <div style={{
                       background: 'var(--bg-app)',
                       border: '1px solid rgba(56, 189, 248, 0.25)',
@@ -348,10 +372,10 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                         <div style={{
-                          width: '60px',
-                          height: '60px',
-                          minWidth: '60px',
-                          minHeight: '60px',
+                          width: '56px',
+                          height: '56px',
+                          minWidth: '56px',
+                          minHeight: '56px',
                           aspectRatio: '1 / 1',
                           borderRadius: '50%',
                           background: 'var(--bg-surface-elevated)',
@@ -366,33 +390,94 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                           flexShrink: 0,
                           boxShadow: '0 4px 14px rgba(56, 189, 248, 0.2)'
                         }}>
-                          {dept.co_lead_photo ? (
-                            <img src={dept.co_lead_photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                          ) : (dept.co_lead_name ? dept.co_lead_name.charAt(0) : '?')}
+                          {(dept.co_lead_1_photo || dept.co_lead_photo) ? (
+                            <img src={dept.co_lead_1_photo || dept.co_lead_photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : ((dept.co_lead_1_name || dept.co_lead_name) ? (dept.co_lead_1_name || dept.co_lead_name).charAt(0) : '?')}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#38bdf8', fontWeight: 800, letterSpacing: '0.04em' }}>
-                              Department Co-Lead
+                              Co-Lead 1
                             </span>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dept.co_lead_name ? '#38bdf8' : 'var(--text-subtle)' }} />
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: (dept.co_lead_1_name || dept.co_lead_name) ? '#38bdf8' : 'var(--text-subtle)' }} />
                           </div>
-                          <div style={{ fontWeight: 700, fontSize: '0.96rem', color: dept.co_lead_name ? 'var(--text-main)' : 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {dept.co_lead_name || 'No Co-Lead Appointed'}
+                          <div style={{ fontWeight: 700, fontSize: '0.94rem', color: (dept.co_lead_1_name || dept.co_lead_name) ? 'var(--text-main)' : 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {dept.co_lead_1_name || dept.co_lead_name || 'No Co-Lead 1 Appointed'}
                           </div>
                           <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {dept.co_lead_email || (dept.co_lead_college_id ? `ID: ${dept.co_lead_college_id}` : 'Supports department lead')}
+                            {dept.co_lead_1_email || dept.co_lead_email || (dept.co_lead_1_college_id ? `ID: ${dept.co_lead_1_college_id}` : 'Supports department lead')}
                           </div>
                         </div>
                       </div>
 
                       <button
                         className="btn btn-outline btn-sm"
-                        onClick={() => openChangeCoLeadModal(dept)}
-                        title="Change Department Co-Lead"
-                        style={{ flexShrink: 0, fontSize: '0.76rem', padding: '6px 10px', borderColor: 'rgba(56, 189, 248, 0.35)', color: '#38bdf8' }}
+                        onClick={() => openChangeCoLead1Modal(dept)}
+                        title="Change Department Co-Lead 1"
+                        style={{ flexShrink: 0, fontSize: '0.74rem', padding: '6px 10px', borderColor: 'rgba(56, 189, 248, 0.35)', color: '#38bdf8' }}
                       >
-                        <UserCheck size={13} /> {dept.co_lead_name ? 'Change Co-Lead' : 'Assign Co-Lead'}
+                        <ShieldCheck size={13} /> {(dept.co_lead_1_name || dept.co_lead_name) ? 'Change Co-Lead 1' : 'Assign Co-Lead 1'}
+                      </button>
+                    </div>
+
+                    {/* 3. Department Co-Lead 2 Card */}
+                    <div style={{
+                      background: 'var(--bg-app)',
+                      border: '1px solid rgba(168, 85, 247, 0.25)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                        <div style={{
+                          width: '56px',
+                          height: '56px',
+                          minWidth: '56px',
+                          minHeight: '56px',
+                          aspectRatio: '1 / 1',
+                          borderRadius: '50%',
+                          background: 'var(--bg-surface-elevated)',
+                          border: '2.5px solid #c084fc',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '1.2rem',
+                          color: '#c084fc',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          boxShadow: '0 4px 14px rgba(168, 85, 247, 0.2)'
+                        }}>
+                          {dept.co_lead_2_photo ? (
+                            <img src={dept.co_lead_2_photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (dept.co_lead_2_name ? dept.co_lead_2_name.charAt(0) : '?')}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#c084fc', fontWeight: 800, letterSpacing: '0.04em' }}>
+                              Co-Lead 2
+                            </span>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dept.co_lead_2_name ? '#c084fc' : 'var(--text-subtle)' }} />
+                          </div>
+                          <div style={{ fontWeight: 700, fontSize: '0.94rem', color: dept.co_lead_2_name ? 'var(--text-main)' : 'var(--text-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {dept.co_lead_2_name || 'No Co-Lead 2 Appointed'}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {dept.co_lead_2_email || (dept.co_lead_2_college_id ? `ID: ${dept.co_lead_2_college_id}` : 'Supports department lead')}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => openChangeCoLead2Modal(dept)}
+                        title="Change Department Co-Lead 2"
+                        style={{ flexShrink: 0, fontSize: '0.74rem', padding: '6px 10px', borderColor: 'rgba(168, 85, 247, 0.35)', color: '#c084fc' }}
+                      >
+                        <ShieldCheck size={13} /> {dept.co_lead_2_name ? 'Change Co-Lead 2' : 'Assign Co-Lead 2'}
                       </button>
                     </div>
                   </div>
@@ -422,7 +507,7 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                 <div>
                   <h3 style={{ margin: 0 }}>{selectedDeptDetail.name}</h3>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', margin: 0 }}>
-                    {selectedDeptDetail.member_count} enrolled members · Lead: {selectedDeptDetail.lead_name || 'Vacant'} · Co-Lead: {selectedDeptDetail.co_lead_name || 'Vacant'}
+                    {selectedDeptDetail.member_count} enrolled members · Lead: {selectedDeptDetail.lead_name || 'Vacant'} · Co-Lead 1: {selectedDeptDetail.co_lead_1_name || selectedDeptDetail.co_lead_name || 'Vacant'} · Co-Lead 2: {selectedDeptDetail.co_lead_2_name || 'Vacant'}
                   </p>
                 </div>
               </div>
@@ -458,7 +543,8 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                     <tbody>
                       {selectedDeptDetail.members.map((m) => {
                         const isLead = m.id === selectedDeptDetail.lead_member_id;
-                        const isCoLead = m.id === selectedDeptDetail.co_lead_member_id;
+                        const isCoLead1 = m.id === (selectedDeptDetail.co_lead_1_member_id || selectedDeptDetail.co_lead_member_id);
+                        const isCoLead2 = m.id === selectedDeptDetail.co_lead_2_member_id;
 
                         return (
                           <tr key={m.id}>
@@ -472,9 +558,13 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                             <td>
                               {isLead ? (
                                 <span className="badge badge-success"><UserCheck size={12} /> Lead</span>
-                              ) : isCoLead ? (
+                              ) : isCoLead1 ? (
                                 <span className="badge badge-info" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                                  <ShieldCheck size={12} /> Co-Lead
+                                  <ShieldCheck size={12} /> Co-Lead 1
+                                </span>
+                              ) : isCoLead2 ? (
+                                <span className="badge badge-info" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+                                  <ShieldCheck size={12} /> Co-Lead 2
                                 </span>
                               ) : (
                                 <span className="badge badge-neutral">Member</span>
@@ -558,13 +648,29 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                 </div>
 
                 <div className="form-group" style={{ marginBottom: '14px' }}>
-                  <label className="form-label">Department Co-Lead</label>
+                  <label className="form-label">Department Co-Lead 1</label>
                   <select
                     className="form-select"
-                    value={deptForm.co_lead_member_id}
-                    onChange={(e) => setDeptForm({ ...deptForm, co_lead_member_id: e.target.value })}
+                    value={deptForm.co_lead_1_member_id}
+                    onChange={(e) => setDeptForm({ ...deptForm, co_lead_1_member_id: e.target.value })}
                   >
-                    <option value="">-- No Co-Lead (Vacant) --</option>
+                    <option value="">-- No Co-Lead 1 (Vacant) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Department Co-Lead 2</label>
+                  <select
+                    className="form-select"
+                    value={deptForm.co_lead_2_member_id}
+                    onChange={(e) => setDeptForm({ ...deptForm, co_lead_2_member_id: e.target.value })}
+                  >
+                    <option value="">-- No Co-Lead 2 (Vacant) --</option>
                     {allMembers.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.full_name} ({m.college_id} - {m.year})
@@ -633,13 +739,29 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                 </div>
 
                 <div className="form-group" style={{ marginBottom: '14px' }}>
-                  <label className="form-label">Appoint Department Co-Lead</label>
+                  <label className="form-label">Appoint Department Co-Lead 1</label>
                   <select
                     className="form-select"
-                    value={newDeptForm.co_lead_member_id}
-                    onChange={(e) => setNewDeptForm({ ...newDeptForm, co_lead_member_id: e.target.value })}
+                    value={newDeptForm.co_lead_1_member_id}
+                    onChange={(e) => setNewDeptForm({ ...newDeptForm, co_lead_1_member_id: e.target.value })}
                   >
-                    <option value="">-- No Co-Lead (Optional) --</option>
+                    <option value="">-- No Co-Lead 1 (Optional) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label">Appoint Department Co-Lead 2</label>
+                  <select
+                    className="form-select"
+                    value={newDeptForm.co_lead_2_member_id}
+                    onChange={(e) => setNewDeptForm({ ...newDeptForm, co_lead_2_member_id: e.target.value })}
+                  >
+                    <option value="">-- No Co-Lead 2 (Optional) --</option>
                     {allMembers.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.full_name} ({m.college_id} - {m.year})
@@ -742,31 +864,31 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
       )}
 
       {/* =========================================================
-          MODAL: CHANGE CO-LEAD
+          MODAL: CHANGE CO-LEAD 1
           ========================================================= */}
-      {isChangeCoLeadOpen && activeDept && (
+      {isChangeCoLead1Open && activeDept && (
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '480px' }}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ShieldCheck size={20} color="#38bdf8" />
-                <h3 style={{ margin: 0 }}>Change Department Co-Lead</h3>
+                <h3 style={{ margin: 0 }}>Change Department Co-Lead 1</h3>
               </div>
-              <button className="btn-icon" onClick={() => setIsChangeCoLeadOpen(false)}><X size={16} /></button>
+              <button className="btn-icon" onClick={() => setIsChangeCoLead1Open(false)}><X size={16} /></button>
             </div>
-            <form onSubmit={handleChangeCoLeadSubmit}>
+            <form onSubmit={handleChangeCoLead1Submit}>
               <div className="modal-body">
                 <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                  Select a club member to appoint as official <strong>Department Co-Lead</strong> for <strong>{activeDept.name}</strong>:
+                  Select a club member to appoint as official <strong>Department Co-Lead 1</strong> for <strong>{activeDept.name}</strong>:
                 </p>
                 <div className="form-group">
-                  <label className="form-label">Select Co-Lead Member</label>
+                  <label className="form-label">Select Co-Lead 1 Member</label>
                   <select
                     className="form-select"
-                    value={newCoLeadId}
-                    onChange={(e) => setNewCoLeadId(e.target.value)}
+                    value={newCoLead1Id}
+                    onChange={(e) => setNewCoLead1Id(e.target.value)}
                   >
-                    <option value="">-- No Co-Lead (Vacant) --</option>
+                    <option value="">-- No Co-Lead 1 (Vacant) --</option>
                     {allMembers.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.full_name} ({m.college_id} - {m.year})
@@ -776,9 +898,54 @@ export default function DepartmentsView({ showToast, onRefreshStats }) {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsChangeCoLeadOpen(false)}>Cancel</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsChangeCoLead1Open(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ background: '#0284c7', borderColor: '#0284c7' }}>
-                  Set As Department Co-Lead
+                  Set As Department Co-Lead 1
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          MODAL: CHANGE CO-LEAD 2
+          ========================================================= */}
+      {isChangeCoLead2Open && activeDept && (
+        <div className="modal-overlay">
+          <div className="modal-card" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={20} color="#c084fc" />
+                <h3 style={{ margin: 0 }}>Change Department Co-Lead 2</h3>
+              </div>
+              <button className="btn-icon" onClick={() => setIsChangeCoLead2Open(false)}><X size={16} /></button>
+            </div>
+            <form onSubmit={handleChangeCoLead2Submit}>
+              <div className="modal-body">
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                  Select a club member to appoint as official <strong>Department Co-Lead 2</strong> for <strong>{activeDept.name}</strong>:
+                </p>
+                <div className="form-group">
+                  <label className="form-label">Select Co-Lead 2 Member</label>
+                  <select
+                    className="form-select"
+                    value={newCoLead2Id}
+                    onChange={(e) => setNewCoLead2Id(e.target.value)}
+                  >
+                    <option value="">-- No Co-Lead 2 (Vacant) --</option>
+                    {allMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({m.college_id} - {m.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsChangeCoLead2Open(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#9333ea', borderColor: '#9333ea' }}>
+                  Set As Department Co-Lead 2
                 </button>
               </div>
             </form>

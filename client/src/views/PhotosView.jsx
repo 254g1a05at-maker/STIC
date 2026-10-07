@@ -119,6 +119,10 @@ export default function PhotosView({ showToast, allPrograms, openAddTrigger, onC
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
+    if (!photoUrl.trim() && (!photoFiles || photoFiles.length === 0)) {
+      showToast('error', 'Photo Required', 'Please select at least one image file to upload or enter an image URL.');
+      return;
+    }
     try {
       const data = new FormData();
       if (programId) {

@@ -83,7 +83,6 @@ function formatDepartment(dept) {
   if (d === 'Project & Innovation' || d === 'Project and Innovation') return 'Project & Innovation';
   if (d === 'Finance & Accounts') return 'Finance';
   if (d === 'Programs & Events') return 'Programs';
-  if (d === 'Website & Announcements') return 'Website';
   if (d === 'Photos Gallery') return 'Photos';
   if (d === 'Videos Archive') return 'Videos';
   if (d === 'Content & Documentation') return 'Documentation';
@@ -570,7 +569,6 @@ export default function ActivityLogView({ showToast }) {
               <option value="Finance & Accounts">Finance</option>
               <option value="Club Members">Club Members</option>
               <option value="Programs & Events">Programs</option>
-              <option value="Website & Announcements">Website</option>
               <option value="Photos Gallery">Photos</option>
               <option value="Videos Archive">Videos</option>
               <option value="Content & Documentation">Documentation</option>
@@ -580,7 +578,7 @@ export default function ActivityLogView({ showToast }) {
               {availableDepts
                 .filter(d => ![
                   'Finance & Accounts', 'Club Members', 'Programs & Events',
-                  'Website & Announcements', 'Photos Gallery', 'Videos Archive',
+                  'Photos Gallery', 'Videos Archive',
                   'Content & Documentation', 'Sponsorships', 'Social Media & Links', 'Settings & Security'
                 ].includes(d))
                 .map(d => (

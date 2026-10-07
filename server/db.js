@@ -38,6 +38,8 @@ function initDb() {
       description TEXT,
       lead_member_id INTEGER,
       co_lead_member_id INTEGER,
+      co_lead_1_member_id INTEGER,
+      co_lead_2_member_id INTEGER,
       icon TEXT,
       is_demo INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -370,6 +372,22 @@ function initDb() {
       WHERE notes LIKE 'Section: %' AND (section IS NULL OR section = '')
     `).run();
   } catch (e) {}
+
+  // Migrate departments table for co_lead_1_member_id and co_lead_2_member_id
+  try {
+    const deptCols = db.prepare("PRAGMA table_info(departments)").all();
+    if (!deptCols.some(c => c.name === 'co_lead_1_member_id')) {
+      db.prepare("ALTER TABLE departments ADD COLUMN co_lead_1_member_id INTEGER").run();
+      db.prepare("UPDATE departments SET co_lead_1_member_id = co_lead_member_id WHERE co_lead_1_member_id IS NULL AND co_lead_member_id IS NOT NULL").run();
+      console.log('[DB] Added co_lead_1_member_id to departments');
+    }
+    if (!deptCols.some(c => c.name === 'co_lead_2_member_id')) {
+      db.prepare("ALTER TABLE departments ADD COLUMN co_lead_2_member_id INTEGER").run();
+      console.log('[DB] Added co_lead_2_member_id to departments');
+    }
+  } catch (e) {
+    console.error('Error migrating departments co-lead columns:', e);
+  }
 
   // Migrate social_media_posts table for Instagram Sync fields
   const socialColumns = [
@@ -1039,59 +1057,71 @@ function ensureDepartmentsAndLeads(database) {
       return null;
     };
 
-    // Configuration of standard 6 departments with Lead and Co-Lead assignments
+    // Configuration of standard 6 departments with Lead and 2 Co-Lead assignments
     const deptConfigs = [
       {
         deptNames: ['Content & Documentation'],
         leadCandidates: [12, 'Neha Verma', 'Content and Documentation Lead'],
-        coLeadCandidates: [7, 'Ananya Deshmukh', 'Co-President'],
-        leadPosition: 'Content and Documentation Lead',
-        coLeadPosition: 'Content & Documentation Co-Lead',
+        coLead1Candidates: [7, 'Ananya Deshmukh', 'Co-President'],
+        coLead2Candidates: [18, 'Priya Sharma', 'Akshaya', 20],
+        leadPosition: 'Content & Documentation Lead',
+        coLead1Position: 'Content & Documentation Co-Lead 1',
+        coLead2Position: 'Content & Documentation Co-Lead 2',
         icon: 'FileText',
         desc: 'Crafts official club reports, newsletters, event write-ups, certificates, and archival logs.'
       },
       {
         deptNames: ['Finance & Sponsorship'],
         leadCandidates: [14, 'Sneha Kulkarni', 'Finance Lead'],
-        coLeadCandidates: [8, 'Rohan Mehra', 'Vice President'],
-        leadPosition: 'Finance Lead',
-        coLeadPosition: 'Finance Co-Lead',
+        coLead1Candidates: [8, 'Rohan Mehra', 'Vice President'],
+        coLead2Candidates: [25, 'Karthik Rao', 'Mehra', 21],
+        leadPosition: 'Finance & Treasurer Lead',
+        coLead1Position: 'Finance Co-Lead 1',
+        coLead2Position: 'Finance Co-Lead 2',
         icon: 'IndianRupee',
         desc: 'Manages budgets, track expenses, coordinates corporate sponsorships, audits grants, and maintains transparency.'
       },
       {
         deptNames: ['Social Media & Publicity'],
         leadCandidates: [13, 'Siddharth Nair', 'Social Media Lead'],
-        coLeadCandidates: [9, 'Pooja Iyer', 'Co-Vice President'],
-        leadPosition: 'Social Media Lead',
-        coLeadPosition: 'Social Media Co-Lead',
+        coLead1Candidates: [9, 'Pooja Iyer', 'Co-Vice President'],
+        coLead2Candidates: [22, 'Bharani Kumar', 'Iyer', 23],
+        leadPosition: 'Social Media & PR Lead',
+        coLead1Position: 'Social Media Co-Lead 1',
+        coLead2Position: 'Social Media Co-Lead 2',
         icon: 'Share2',
         desc: 'Builds brand presence, runs Instagram, YouTube, and LinkedIn campaigns, and designs promotional graphics.'
       },
       {
         deptNames: ['Technical & Infrastructure', 'Technical & Innovation', 'Technical'],
         leadCandidates: [11, 'Kaviraj Patel', 'Technical Lead'],
-        coLeadCandidates: [6, 'Aarav Sharma', 'President'],
+        coLead1Candidates: [6, 'Aarav Sharma', 'President'],
+        coLead2Candidates: [24, 'Chandu B R', 'Sharma', 26],
         leadPosition: 'Technical Lead',
-        coLeadPosition: 'Technical Co-Lead',
+        coLead1Position: 'Technical Co-Lead 1',
+        coLead2Position: 'Technical Co-Lead 2',
         icon: 'Cpu',
         desc: 'Builds club software infrastructure, systems, web tools, coding bootcamps, and technical architectures.'
       },
       {
         deptNames: ['Event Coordinators', 'Events & Operations', 'Event Management'],
         leadCandidates: [10, 'Vikram Singh', 'Secretary'],
-        coLeadCandidates: [15, 'Aditya Varma', 'Event Manager'],
+        coLead1Candidates: [15, 'Aditya Varma', 'Event Manager'],
+        coLead2Candidates: [27, 'Rahul Joshi', 'Varma', 28],
         leadPosition: 'Event Management Lead',
-        coLeadPosition: 'Event Management Co-Lead',
+        coLead1Position: 'Event Management Co-Lead 1',
+        coLead2Position: 'Event Management Co-Lead 2',
         icon: 'CalendarCheck',
         desc: 'Leads end-to-end logistics, campus outreach, stage management, volunteer delegation, and venue setup.'
       },
       {
         deptNames: ['Project & Innovation', 'Project and Innovation'],
         leadCandidates: [16, 'Divya Reddy'],
-        coLeadCandidates: [17, 'Rahul Kapoor'],
+        coLead1Candidates: [17, 'Rahul Kapoor'],
+        coLead2Candidates: [63, 'D. Vazeer Aman', 'Vazeer Aman', 30],
         leadPosition: 'Project & Innovation Lead',
-        coLeadPosition: 'Project & Innovation Co-Lead',
+        coLead1Position: 'Project & Innovation Co-Lead 1',
+        coLead2Position: 'Project & Innovation Co-Lead 2',
         icon: 'Lightbulb',
         desc: 'Drives cutting-edge student projects, green engineering prototypes, patent applications, research papers, and technical innovation challenges.'
       }
@@ -1109,22 +1139,36 @@ function ensureDepartmentsAndLeads(database) {
       if (!deptId) continue;
 
       const lead = findMember(cfg.leadCandidates);
-      const coLead = findMember(cfg.coLeadCandidates);
+      const coLead1 = findMember(cfg.coLead1Candidates);
+      const coLead2 = findMember(cfg.coLead2Candidates);
 
       database.prepare(`
         UPDATE departments 
         SET lead_member_id = ?,
             co_lead_member_id = ?,
+            co_lead_1_member_id = ?,
+            co_lead_2_member_id = ?,
             icon = COALESCE(icon, ?),
             description = COALESCE(description, ?)
         WHERE id = ?
-      `).run(lead ? lead.id : null, coLead ? coLead.id : null, cfg.icon, cfg.desc, deptId);
+      `).run(
+        lead ? lead.id : null,
+        coLead1 ? coLead1.id : null,
+        coLead1 ? coLead1.id : null,
+        coLead2 ? coLead2.id : null,
+        cfg.icon,
+        cfg.desc,
+        deptId
+      );
 
       if (lead) {
         database.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(deptId, cfg.leadPosition, lead.id);
       }
-      if (coLead) {
-        database.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(deptId, cfg.coLeadPosition, coLead.id);
+      if (coLead1) {
+        database.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(deptId, cfg.coLead1Position, coLead1.id);
+      }
+      if (coLead2) {
+        database.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(deptId, cfg.coLead2Position, coLead2.id);
       }
     }
 

@@ -23,7 +23,6 @@ import CoordinatorsView from './views/CoordinatorsView';
 import SearchView from './views/SearchView';
 import ActivityLogView from './views/ActivityLogView';
 import SettingsView from './views/SettingsView';
-import WebsiteView from './views/WebsiteView';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -406,13 +405,6 @@ export default function App() {
               allPrograms={allPrograms}
               openAddTrigger={quickActionType === 'document'}
               onCloseAddTrigger={() => setQuickActionType(null)}
-            />
-          )}
-
-          {currentView === 'website' && (
-            <WebsiteView
-              showToast={showToast}
-              setView={setCurrentView}
             />
           )}
 

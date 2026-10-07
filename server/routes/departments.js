@@ -4,7 +4,7 @@ const { db } = require('../db');
 const { requireAuth } = require('../auth');
 const { logActivity } = require('../activity');
 
-// GET /api/departments (all departments with lead & co-lead details & member count)
+// GET /api/departments (all departments with lead & 2 co-leads details & member count)
 router.get('/', requireAuth, (req, res) => {
   try {
     const departments = db.prepare(`
@@ -15,15 +15,26 @@ router.get('/', requireAuth, (req, res) => {
         m.phone as lead_phone,
         m.profile_photo as lead_photo,
         m.college_id as lead_college_id,
-        cm.full_name as co_lead_name,
-        cm.email as co_lead_email,
-        cm.phone as co_lead_phone,
-        cm.profile_photo as co_lead_photo,
-        cm.college_id as co_lead_college_id,
+        cm1.full_name as co_lead_1_name,
+        cm1.full_name as co_lead_name,
+        cm1.email as co_lead_1_email,
+        cm1.email as co_lead_email,
+        cm1.phone as co_lead_1_phone,
+        cm1.phone as co_lead_phone,
+        cm1.profile_photo as co_lead_1_photo,
+        cm1.profile_photo as co_lead_photo,
+        cm1.college_id as co_lead_1_college_id,
+        cm1.college_id as co_lead_college_id,
+        cm2.full_name as co_lead_2_name,
+        cm2.email as co_lead_2_email,
+        cm2.phone as co_lead_2_phone,
+        cm2.profile_photo as co_lead_2_photo,
+        cm2.college_id as co_lead_2_college_id,
         (SELECT COUNT(*) FROM club_members mem WHERE mem.department_id = d.id) as member_count
       FROM departments d
       LEFT JOIN club_members m ON d.lead_member_id = m.id
-      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
+      LEFT JOIN club_members cm1 ON COALESCE(d.co_lead_1_member_id, d.co_lead_member_id) = cm1.id
+      LEFT JOIN club_members cm2 ON d.co_lead_2_member_id = cm2.id
       ORDER BY d.id ASC
     `).all();
 
@@ -34,7 +45,7 @@ router.get('/', requireAuth, (req, res) => {
   }
 });
 
-// GET /api/departments/:id (single department with lead, co-lead & all its members)
+// GET /api/departments/:id (single department with lead, 2 co-leads & all its members)
 router.get('/:id', requireAuth, (req, res) => {
   try {
     const deptId = Number(req.params.id);
@@ -46,14 +57,25 @@ router.get('/:id', requireAuth, (req, res) => {
         m.phone as lead_phone,
         m.profile_photo as lead_photo,
         m.college_id as lead_college_id,
-        cm.full_name as co_lead_name,
-        cm.email as co_lead_email,
-        cm.phone as co_lead_phone,
-        cm.profile_photo as co_lead_photo,
-        cm.college_id as co_lead_college_id
+        cm1.full_name as co_lead_1_name,
+        cm1.full_name as co_lead_name,
+        cm1.email as co_lead_1_email,
+        cm1.email as co_lead_email,
+        cm1.phone as co_lead_1_phone,
+        cm1.phone as co_lead_phone,
+        cm1.profile_photo as co_lead_1_photo,
+        cm1.profile_photo as co_lead_photo,
+        cm1.college_id as co_lead_1_college_id,
+        cm1.college_id as co_lead_college_id,
+        cm2.full_name as co_lead_2_name,
+        cm2.email as co_lead_2_email,
+        cm2.phone as co_lead_2_phone,
+        cm2.profile_photo as co_lead_2_photo,
+        cm2.college_id as co_lead_2_college_id
       FROM departments d
       LEFT JOIN club_members m ON d.lead_member_id = m.id
-      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
+      LEFT JOIN club_members cm1 ON COALESCE(d.co_lead_1_member_id, d.co_lead_member_id) = cm1.id
+      LEFT JOIN club_members cm2 ON d.co_lead_2_member_id = cm2.id
       WHERE d.id = ?
     `).get(deptId);
 
@@ -152,7 +174,7 @@ router.post('/', requireAuth, (req, res) => {
   }
 });
 
-// PUT /api/departments/:id (update name, description, lead, co-lead, icon)
+// PUT /api/departments/:id (update name, description, lead, 2 co-leads, icon)
 router.put('/:id', requireAuth, (req, res) => {
   try {
     const deptId = Number(req.params.id);
@@ -161,7 +183,7 @@ router.put('/:id', requireAuth, (req, res) => {
       return res.status(404).json({ success: false, message: 'Department not found.' });
     }
 
-    const { name, description, lead_member_id, co_lead_member_id, icon } = req.body;
+    const { name, description, lead_member_id, co_lead_member_id, co_lead_1_member_id, co_lead_2_member_id, icon } = req.body;
 
     let leadId = existing.lead_member_id;
     if (lead_member_id !== undefined) {
@@ -171,23 +193,52 @@ router.put('/:id', requireAuth, (req, res) => {
         if (!leadMember) {
           return res.status(400).json({ success: false, message: 'Selected lead member does not exist.' });
         }
-        db.prepare('UPDATE club_members SET department_id = ? WHERE id = ?').run(deptId, leadId);
+        db.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(
+          deptId,
+          `${(name || existing.name).trim()} Lead`,
+          leadId
+        );
       } else {
         leadId = null;
       }
     }
 
-    let coLeadId = existing.co_lead_member_id;
-    if (co_lead_member_id !== undefined) {
-      if (co_lead_member_id !== null && co_lead_member_id !== '') {
-        coLeadId = Number(co_lead_member_id);
-        const coLeadMember = db.prepare('SELECT id FROM club_members WHERE id = ?').get(coLeadId);
-        if (!coLeadMember) {
-          return res.status(400).json({ success: false, message: 'Selected co-lead member does not exist.' });
+    // Co-Lead 1
+    const rawCoLead1 = co_lead_1_member_id !== undefined ? co_lead_1_member_id : co_lead_member_id;
+    let coLead1Id = existing.co_lead_1_member_id || existing.co_lead_member_id;
+    if (rawCoLead1 !== undefined) {
+      if (rawCoLead1 !== null && rawCoLead1 !== '') {
+        coLead1Id = Number(rawCoLead1);
+        const m1 = db.prepare('SELECT id FROM club_members WHERE id = ?').get(coLead1Id);
+        if (!m1) {
+          return res.status(400).json({ success: false, message: 'Selected Co-Lead 1 member does not exist.' });
         }
-        db.prepare('UPDATE club_members SET department_id = ? WHERE id = ?').run(deptId, coLeadId);
+        db.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(
+          deptId,
+          `${(name || existing.name).trim()} Co-Lead 1`,
+          coLead1Id
+        );
       } else {
-        coLeadId = null;
+        coLead1Id = null;
+      }
+    }
+
+    // Co-Lead 2
+    let coLead2Id = existing.co_lead_2_member_id;
+    if (co_lead_2_member_id !== undefined) {
+      if (co_lead_2_member_id !== null && co_lead_2_member_id !== '') {
+        coLead2Id = Number(co_lead_2_member_id);
+        const m2 = db.prepare('SELECT id FROM club_members WHERE id = ?').get(coLead2Id);
+        if (!m2) {
+          return res.status(400).json({ success: false, message: 'Selected Co-Lead 2 member does not exist.' });
+        }
+        db.prepare('UPDATE club_members SET department_id = ?, position = ? WHERE id = ?').run(
+          deptId,
+          `${(name || existing.name).trim()} Co-Lead 2`,
+          coLead2Id
+        );
+      } else {
+        coLead2Id = null;
       }
     }
 
@@ -197,6 +248,8 @@ router.put('/:id', requireAuth, (req, res) => {
         description = COALESCE(?, description),
         lead_member_id = ?,
         co_lead_member_id = ?,
+        co_lead_1_member_id = ?,
+        co_lead_2_member_id = ?,
         icon = COALESCE(?, icon),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -204,7 +257,9 @@ router.put('/:id', requireAuth, (req, res) => {
       name ? name.trim() : null,
       description !== undefined ? description : null,
       leadId,
-      coLeadId,
+      coLead1Id,
+      coLead1Id,
+      coLead2Id,
       icon || null,
       deptId
     );
@@ -217,15 +272,26 @@ router.put('/:id', requireAuth, (req, res) => {
         m.phone as lead_phone,
         m.profile_photo as lead_photo,
         m.college_id as lead_college_id,
-        cm.full_name as co_lead_name,
-        cm.email as co_lead_email,
-        cm.phone as co_lead_phone,
-        cm.profile_photo as co_lead_photo,
-        cm.college_id as co_lead_college_id,
+        cm1.full_name as co_lead_1_name,
+        cm1.full_name as co_lead_name,
+        cm1.email as co_lead_1_email,
+        cm1.email as co_lead_email,
+        cm1.phone as co_lead_1_phone,
+        cm1.phone as co_lead_phone,
+        cm1.profile_photo as co_lead_1_photo,
+        cm1.profile_photo as co_lead_photo,
+        cm1.college_id as co_lead_1_college_id,
+        cm1.college_id as co_lead_college_id,
+        cm2.full_name as co_lead_2_name,
+        cm2.email as co_lead_2_email,
+        cm2.phone as co_lead_2_phone,
+        cm2.profile_photo as co_lead_2_photo,
+        cm2.college_id as co_lead_2_college_id,
         (SELECT COUNT(*) FROM club_members mem WHERE mem.department_id = d.id) as member_count
       FROM departments d
       LEFT JOIN club_members m ON d.lead_member_id = m.id
-      LEFT JOIN club_members cm ON d.co_lead_member_id = cm.id
+      LEFT JOIN club_members cm1 ON COALESCE(d.co_lead_1_member_id, d.co_lead_member_id) = cm1.id
+      LEFT JOIN club_members cm2 ON d.co_lead_2_member_id = cm2.id
       WHERE d.id = ?
     `).get(deptId);
 

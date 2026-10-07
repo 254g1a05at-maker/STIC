@@ -89,8 +89,9 @@ export default function DocumentsView({ showToast }) {
     if (!file) return;
 
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['docx', 'pptx', 'pdf'].includes(ext)) {
-      showToast('error', 'Unsupported Format', 'Please upload a DOCX, PPTX, or PDF template file.');
+    const allowed = ['docx', 'doc', 'pptx', 'ppt', 'pdf', 'txt', 'rtf', 'html'];
+    if (!allowed.includes(ext)) {
+      showToast('error', 'Unsupported Format', 'Please upload a DOCX, DOC, PPTX, PDF, or text template file.');
       return;
     }
 
@@ -106,7 +107,7 @@ export default function DocumentsView({ showToast }) {
   const handleUploadCustomTemplateSubmit = async (e) => {
     e.preventDefault();
     if (!uploadForm.file) {
-      showToast('error', 'File Required', 'Please choose a DOCX, PPTX, or PDF template file from your computer.');
+      showToast('error', 'File Required', 'Please choose a template file from your computer.');
       return;
     }
     if (!uploadForm.name.trim()) {
@@ -656,12 +657,12 @@ The Sustainable Technology & Innovation Club successfully organized a technical 
                     {uploadForm.file ? uploadForm.file.name : 'Select or Drop Template File'}
                   </h4>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: 0 }}>
-                    Supports <strong>DOCX</strong>, <strong>PPTX</strong>, and <strong>PDF</strong> templates.
+                    Supports <strong>DOCX</strong>, <strong>DOC</strong>, <strong>PPTX</strong>, <strong>PDF</strong>, and <strong>TXT</strong> templates.
                   </p>
                   <input
                     id="customTemplateFileInput"
                     type="file"
-                    accept=".docx,.pptx,.pdf"
+                    accept=".docx,.doc,.pptx,.ppt,.pdf,.txt,.rtf,.html"
                     style={{ display: 'none' }}
                     onChange={handleUploadFileSelect}
                   />

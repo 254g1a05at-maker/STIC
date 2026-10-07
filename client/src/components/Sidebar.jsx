@@ -62,9 +62,8 @@ export default function Sidebar({ currentView, setView, mobileOpen, setMobileOpe
       ]
     },
     {
-      title: 'Website & Media',
+      title: 'Media & Documentation',
       items: [
-        { id: 'website', label: 'Website & Announcements', icon: Globe },
         { id: 'photos', label: 'Photos Gallery', icon: Image },
         { id: 'videos', label: 'Videos Archive', icon: Video },
         { id: 'documents', label: 'Content & Documentation', icon: FileText }

@@ -164,15 +164,6 @@ export default function TopHeader({
                   gap: '4px'
                 }}
               >
-                {(!user?.is_website_handler || user?.permissions?.manage_announcements) && (
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ justifyContent: 'flex-start', border: 'none', background: 'transparent', color: 'var(--accent-cyan)' }}
-                    onClick={() => { setShowQuickMenu(false); setView('website'); }}
-                  >
-                    + New Announcement
-                  </button>
-                )}
                 {(!user?.is_website_handler || user?.permissions?.manage_members) && (
                   <button
                     className="btn btn-secondary btn-sm"

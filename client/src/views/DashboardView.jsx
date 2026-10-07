@@ -856,13 +856,13 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* 7. STIC 5 FUNCTIONAL DEPARTMENTS & WINGS */}
+      {/* 7. STIC 6 FUNCTIONAL DEPARTMENTS & WINGS */}
       <div className="stic-card" style={{ marginBottom: '32px' }}>
         <div className="card-header-bar" style={{ padding: '20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Building2 size={18} color="var(--accent-cyan)" />
             <h3 style={{ margin: 0, fontSize: '1.02rem' }}>
-              CSE – STIC Functional Wings &amp; Leadership
+              CSE – STIC Functional Wings &amp; Leadership (6 Wings)
             </h3>
           </div>
           <button
@@ -891,7 +891,7 @@ export default function DashboardView({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '6px' }}>
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Lead:</span>
                     <span style={{ color: dept.lead_name ? 'var(--primary-light)' : 'var(--text-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -899,14 +899,20 @@ export default function DashboardView({
                     </span>
                   </div>
                   <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Co-Lead:</span>
-                    <span style={{ color: dept.co_lead_name ? '#38bdf8' : 'var(--text-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {dept.co_lead_name || 'Unassigned'}
+                    <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Co-Lead 1:</span>
+                    <span style={{ color: (dept.co_lead_1_name || dept.co_lead_name) ? '#38bdf8' : 'var(--text-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {dept.co_lead_1_name || dept.co_lead_name || 'Unassigned'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Co-Lead 2:</span>
+                    <span style={{ color: dept.co_lead_2_name ? '#c084fc' : 'var(--text-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {dept.co_lead_2_name || 'Unassigned'}
                     </span>
                   </div>
                 </div>
 
-                <p style={{ fontSize: '0.74rem', color: 'var(--text-subtle)', lineHeight: 1.45, margin: '4px 0 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                <p style={{ fontSize: '0.74rem', color: 'var(--text-subtle)', lineHeight: 1.45, margin: '6px 0 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {dept.description || 'Core wing contributing to club operations and projects.'}
                 </p>
               </div>

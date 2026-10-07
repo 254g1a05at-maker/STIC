@@ -33,16 +33,28 @@ export const REPRESENTATIVE_POSITIONS = [
   'General Secretary',
   'Secretary',
   'Project & Innovation Lead',
+  'Project & Innovation Co-Lead 1',
+  'Project & Innovation Co-Lead 2',
   'Project & Innovation Co-Lead',
   'Technical Lead',
+  'Technical Co-Lead 1',
+  'Technical Co-Lead 2',
   'Technical Co-Lead',
   'Content & Documentation Lead',
+  'Content & Documentation Co-Lead 1',
+  'Content & Documentation Co-Lead 2',
   'Content & Documentation Co-Lead',
   'Social Media & PR Lead',
+  'Social Media Co-Lead 1',
+  'Social Media Co-Lead 2',
   'Social Media Co-Lead',
   'Finance & Treasurer Lead',
+  'Finance Co-Lead 1',
+  'Finance Co-Lead 2',
   'Finance Co-Lead',
   'Event Management Lead',
+  'Event Management Co-Lead 1',
+  'Event Management Co-Lead 2',
   'Event Management Co-Lead',
   'Event Coordinator'
 ];
@@ -56,29 +68,42 @@ export const getRoleRank = (pos = '') => {
   if (p.includes('co-vice president') || p.includes('co - vice president') || p === 'covp') return 3;
   if (p.includes('secretary')) return 4;
   if (p.includes('project') || p.includes('innovation')) {
-    if (p.includes('co-lead') || p.includes('co lead')) return 5.5;
+    if (p.includes('co-lead 1') || p.includes('co lead 1')) return 5.3;
+    if (p.includes('co-lead 2') || p.includes('co lead 2')) return 5.5;
+    if (p.includes('co-lead') || p.includes('co lead')) return 5.4;
     return 5.1;
   }
   if (p.includes('technical') || p.includes('tech lead')) {
-    if (p.includes('co-lead') || p.includes('co lead')) return 6.5;
+    if (p.includes('co-lead 1') || p.includes('co lead 1')) return 6.3;
+    if (p.includes('co-lead 2') || p.includes('co lead 2')) return 6.5;
+    if (p.includes('co-lead') || p.includes('co lead')) return 6.4;
     return 6;
   }
   if (p.includes('content') || p.includes('editorial') || (p.includes('documentation') && p.includes('lead'))) {
-    if (p.includes('co-lead') || p.includes('co lead')) return 7.5;
+    if (p.includes('co-lead 1') || p.includes('co lead 1')) return 7.3;
+    if (p.includes('co-lead 2') || p.includes('co lead 2')) return 7.5;
+    if (p.includes('co-lead') || p.includes('co lead')) return 7.4;
     return 7;
   }
   if (p.includes('social') || p.includes('publicity') || p.includes('pr lead')) {
-    if (p.includes('co-lead') || p.includes('co lead')) return 8.5;
+    if (p.includes('co-lead 1') || p.includes('co lead 1')) return 8.3;
+    if (p.includes('co-lead 2') || p.includes('co lead 2')) return 8.5;
+    if (p.includes('co-lead') || p.includes('co lead')) return 8.4;
     return 8;
   }
   if (p.includes('finance') || p.includes('treasurer')) {
-    if (p.includes('co-lead') || p.includes('co lead')) return 9.5;
+    if (p.includes('co-lead 1') || p.includes('co lead 1')) return 9.3;
+    if (p.includes('co-lead 2') || p.includes('co lead 2')) return 9.5;
+    if (p.includes('co-lead') || p.includes('co lead')) return 9.4;
     return 9;
   }
   if (p.includes('event') || p.includes('coordinator') || p.includes('manager')) {
-    if (p.includes('co-lead') || p.includes('co lead')) return 10.5;
+    if (p.includes('co-lead 1') || p.includes('co lead 1')) return 10.3;
+    if (p.includes('co-lead 2') || p.includes('co lead 2')) return 10.5;
+    if (p.includes('co-lead') || p.includes('co lead')) return 10.4;
     return 10;
   }
+  if (p.includes('co-lead') || p.includes('co lead')) return 11;
   return 999;
 };
 
@@ -294,12 +319,29 @@ export const getRoleDetails = (position = '') => {
   };
 };
 
+export const DEFAULT_DEPARTMENTS = [
+  { id: 1, name: 'Content & Documentation' },
+  { id: 2, name: 'Finance & Sponsorship' },
+  { id: 3, name: 'Social Media & Publicity' },
+  { id: 4, name: 'Technical & Infrastructure' },
+  { id: 5, name: 'Event Coordinators' },
+  { id: 6, name: 'Project & Innovation' }
+];
+
 export default function MembersView({ departments, showToast, openAddTrigger, onCloseAddTrigger }) {
   const user = authState.getUser();
   const canManageMembers = !user?.is_website_handler || Boolean(user?.permissions?.manage_members);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
+
+  const activeDepartments = (departments && departments.length > 0)
+    ? (
+        departments.some(d => (d.name || '').toLowerCase().includes('project') || (d.name || '').toLowerCase().includes('innovation'))
+          ? departments
+          : [...departments, { id: 6, name: 'Project & Innovation' }]
+      )
+    : DEFAULT_DEPARTMENTS;
   
   // Filters
   const [search, setSearch] = useState('');
@@ -576,7 +618,7 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
           onChange={(e) => setSelectedDept(e.target.value)}
         >
           <option value="">All Departments</option>
-          {(departments || []).map((d) => (
+          {activeDepartments.map((d) => (
             <option key={d.id} value={d.id}>{d.name}</option>
           ))}
           <option value="unassigned">Club Member</option>
@@ -1440,8 +1482,8 @@ export default function MembersView({ departments, showToast, openAddTrigger, on
                       value={formData.department_id}
                       onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
                     >
-                      <option value="">Club Member</option>
-                      {(departments || []).map((d) => (
+                      <option value="">Club Member (Unassigned)</option>
+                      {activeDepartments.map((d) => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
